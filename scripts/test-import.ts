@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {parseCSV,normalizeDate,importCount} from '../src/lib/import';
+import {generatePDF} from '../src/lib/pdf';
+import {questions,validatedDraft} from '../src/lib/model';
+async function main(){
+const path=process.argv[2]||'private/SAM_PDS_RECORD.csv';
+const raw=readFileSync(path,'utf8');const r=parseCSV(raw,'SAM_PDS_RECORD.csv');
+assert.equal(r.data.values.surname,'PANGILINAN');assert.equal(r.data.values.firstName,'SAM FAUS SAID ZAHRAN');
+assert.equal(r.data.values.birthDate,'1994-08-16');assert.equal(r.data.values.height,'1.78');assert.equal(r.data.values.weight,'85');
+assert.equal(r.data.values.residentialZip,'6000');assert.equal(r.data.values.residentialCity,'CEBU CITY');
+assert.equal(r.data.values.motherFirst,'LUCILITA');assert.equal(r.data.values.accomplished,'2026-09-06');
+assert.equal(r.data.records.work.length,8);assert.equal(r.data.records.work[0].salary,'100000.00');assert.equal(r.data.records.work[0].from,'2026-02-28');
+assert.equal(r.data.records.work[2].government,'Y');assert.equal(r.data.records.voluntary.length,4);assert.equal(r.data.records.training.length,3);
+assert.equal(r.data.records.references.length,3);assert.equal(r.data.records.skills.length,5);assert.equal(r.data.records.distinctions.length,2);assert.equal(r.data.records.memberships.length,3);
+assert.equal(r.data.records.education.filter(r=>r.school).length,3);assert.equal(r.unmapped.length,1);assert.equal(r.unmapped[0].label,'SSS NO');
+assert.ok(questions.every(q=>r.data.values[q.key]==='No'));assert.throws(()=>normalizeDate('31/02/2026','dmy'));
+assert.equal(normalizeDate('08/16/1994','mdy'),'1994-08-16');assert.deepEqual(validatedDraft(r.data).values,r.data.values);
+const out=await generatePDF(r.data,{template:readFileSync('public/csc-2026.pdf'),font:readFileSync('public/NotoSans.ttf')});
+writeFileSync('private/SAM-generated.pdf',out);writeFileSync('private/import-result.json',JSON.stringify(r,null,2));
+console.log(JSON.stringify({passed:true,mappedValues:importCount(r),workRecords:r.data.records.work.length,volunteerRecords:r.data.records.voluntary.length,trainingRecords:r.data.records.training.length,referenceRecords:r.data.records.references.length,unmapped:r.unmapped.map(u=>u.label),pdfBytes:out.length}));
+}main();
