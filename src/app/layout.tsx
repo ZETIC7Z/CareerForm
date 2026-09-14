@@ -39,10 +39,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
-    { media: '(prefers-color-scheme: dark)', color: '#000000' },
-  ],
+  themeColor: '#000000',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -52,6 +49,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       data-theme="dark"
       suppressHydrationWarning
       className={`${syne.variable} ${spaceGrotesk.variable} ${montserrat.variable}`}
+      style={{ backgroundColor: '#000000', colorScheme: 'dark' }}
     >
       <head>
         <meta
@@ -59,9 +57,20 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
         <meta name="HandheldFriendly" content="true" />
+        <meta name="color-scheme" content="dark light" />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              html { background-color: #000000; color-scheme: dark; }
+              html[data-theme="light"] { background-color: #f8fafc; color-scheme: light; }
+              body { background-color: #000000; }
+              html[data-theme="light"] body { background-color: #f8fafc; }
+            `,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('careerform-theme')||'dark';document.documentElement.setAttribute('data-theme',t);if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('careerform-theme')||'dark';document.documentElement.setAttribute('data-theme',t);if(t==='light'){document.documentElement.style.backgroundColor='#f8fafc';document.documentElement.style.colorScheme='light';}else{document.documentElement.style.backgroundColor='#000000';document.documentElement.style.colorScheme='dark';}}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`,
           }}
         />
       </head>

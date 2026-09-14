@@ -111,7 +111,6 @@ body{
   color:var(--text);
   font-size:14px;
   background:var(--bg);
-  transition:background-color .45s ease,color .45s ease;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
   touch-action:pan-y;
@@ -206,7 +205,7 @@ img{max-width:100%}
 /* ============================================================
    Site chrome
    ============================================================ */
-.site-shell{min-height:100vh;display:flex;flex-direction:column;background:var(--bg);transition:background .45s,color .45s}
+.site-shell{min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
 .site-header{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--panel) 86%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 .site-header-in{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:26px;padding:0 28px;height:70px}
 .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px;letter-spacing:-.02em;color:var(--heading)}
@@ -239,8 +238,14 @@ img{max-width:100%}
 .btn-primary:hover{filter:brightness(1.12);transform:translateY(-2px);box-shadow:0 16px 34px color-mix(in srgb,var(--accent) 36%,transparent)}
 .btn-gold{background:var(--accent);color:var(--accent-ink);box-shadow:0 10px 26px color-mix(in srgb,var(--accent) 28%,transparent)}
 .btn-gold:hover{filter:brightness(1.12);transform:translateY(-2px);box-shadow:0 16px 34px color-mix(in srgb,var(--accent) 36%,transparent)}
+.btn-secondary{border:1.5px solid var(--line-strong);color:var(--heading);background:var(--panel-2)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);background:var(--active);transform:translateY(-2px)}
+:root[data-theme=light] .btn-secondary{border-color:#cbd5e1;color:#0f172a;background:#f1f5f9}
+:root[data-theme=light] .btn-secondary:hover{border-color:var(--accent);color:var(--accent);background:#ffffff}
 .btn-ghost{border-color:var(--line-strong);color:var(--text);background:var(--panel)}
 .btn-ghost:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+:root[data-theme=light] .btn-ghost{border-color:#cbd5e1;color:#0f172a;background:#ffffff}
+:root[data-theme=light] .btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:#f8fafc}
 .btn-danger{background:var(--danger);color:#fff;box-shadow:0 10px 26px rgba(179,38,30,.3)}
 .btn-danger:hover{transform:translateY(-2px)}
 .btn[disabled],.btn.disabled{opacity:.4;pointer-events:none}
@@ -1217,25 +1222,33 @@ body.intro-lock{overflow:hidden}
 .intro-kicker{font-size:11px;font-weight:750;letter-spacing:.28em;color:#efc95e;text-align:center;will-change:transform,opacity}
 @keyframes star-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-30px,20px,0)}}
 
-.site-header,.workspace-topbar{background:#07111e;border-color:#1b2b42;color:#eaf2fb}
-.site-header-in{height:88px;max-width:1440px}
-.site-brand-link{display:flex;align-items:center;flex-shrink:0;line-height:0}
-.site-brand-logo{display:block;width:250px;height:auto;max-height:72px;object-fit:contain;object-position:left center}
-.site-brand-logo-footer{width:235px;max-height:72px}
-.footer-brand-link{margin-bottom:14px}
-.site-header .site-nav{margin-left:auto}
-.site-header .site-nav a{color:#9db0c7}
-.site-header .site-nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
-.site-header .site-nav a.active{color:#fff;background:rgba(110,168,255,.16)}
-.site-header .btn-ghost{color:#eaf2fb;border-color:#40536c;background:rgba(255,255,255,.04)}
-.site-header .btn-primary{background:#165ba8;color:#fff}
-.site-footer{background:#07111e;border-color:#1b2b42}
-.site-footer h4{color:#93a9c2}
-.site-footer p,.site-footer .footer-links a,.site-footer .footer-base{color:#91a4ba}
-.site-footer .footer-links a:hover{color:#fff}
-.site-footer .brand{color:#fff}
-.site-footer .footer-socials a{border-color:#2c415d;color:#9db0c7}
-.site-footer .footer-socials a:hover{color:#fff;border-color:#6ea8ff}
+.site-header, .workspace-topbar {
+  background: var(--glass-bg);
+  border-color: var(--line);
+  color: var(--text);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.site-header-in { height: 74px; max-width: 1440px; }
+.site-brand-link { display: flex; align-items: center; flex-shrink: 0; line-height: 0; }
+.site-brand-logo { display: block; width: 220px; height: auto; max-height: 60px; object-fit: contain; object-position: left center; }
+.site-brand-logo-footer { width: 220px; max-height: 60px; }
+.footer-brand-link { margin-bottom: 14px; }
+.site-header .site-nav { margin-left: auto; }
+.site-header .site-nav a { color: var(--muted); }
+.site-header .site-nav a:hover { color: var(--heading); background: var(--active); }
+.site-header .site-nav a.active { color: var(--accent); background: var(--active); }
+.site-header .btn-ghost { color: var(--text); border-color: var(--line-strong); background: var(--panel); }
+:root[data-theme=light] .site-header .btn-ghost { color: #0f172a; border-color: #cbd5e1; background: #ffffff; }
+.site-header .btn-primary { background: var(--accent); color: var(--accent-ink); }
+.site-footer { background: var(--panel-2); border-color: var(--line); }
+:root[data-theme=light] .site-footer { background: #f8fafc; border-color: #e2e8f0; }
+.site-footer h4 { color: var(--heading); }
+.site-footer p, .site-footer .footer-links a, .site-footer .footer-base { color: var(--muted); }
+.site-footer .footer-links a:hover { color: var(--heading); }
+.site-footer .brand { color: var(--heading); }
+.site-footer .footer-socials a { border-color: var(--line); color: var(--muted); }
+.site-footer .footer-socials a:hover { color: var(--heading); border-color: var(--accent); }
 
 /* ============================================================
    Workspace shell (VeriWorkly-style): fixed-height app frame. The page
