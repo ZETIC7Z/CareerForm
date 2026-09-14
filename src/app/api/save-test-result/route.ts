@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       return NextResponse.json({error: 'Missing name or dataUrl'}, {status: 400});
     }
 
-    const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const base64Data = dataUrl.replace(/^data:[^;]+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
     const outDir = 'C:\\Users\\Administrator\\Desktop\\RESULT TEST';
     if (!fs.existsSync(outDir)) {

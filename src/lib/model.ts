@@ -20,7 +20,71 @@ export function validatedDraft(input:unknown):PDS{
  if(typeof raw.signatureDate==='string')result.signatureDate=raw.signatureDate.slice(0,100);
  return result;
 }
-export function getValue(data:PDS,key:string):string{const [table,index,field]=key.split('.');return field?data.records[table]?.[Number(index)]?.[field]||'':data.values[key]||''}
+const FIELD_ALIASES: Record<string, string> = {
+  fatherFirst: 'fatherFirstName',
+  fatherFirstName: 'fatherFirst',
+  fatherMiddle: 'fatherMiddleName',
+  fatherMiddleName: 'fatherMiddle',
+  motherFirst: 'motherFirstName',
+  motherFirstName: 'motherFirst',
+  motherMiddle: 'motherMiddleName',
+  motherMiddleName: 'motherMiddle',
+  spouseFirst: 'spouseFirstName',
+  spouseFirstName: 'spouseFirst',
+  spouseMiddle: 'spouseMiddleName',
+  spouseMiddleName: 'spouseMiddle',
+  agencyId: 'agencyEmployeeNo',
+  agencyEmployeeNo: 'agencyId',
+  psn: 'philSys',
+  philSys: 'psn',
+};
+
+const COLUMN_ALIASES: Record<string, string[]> = {
+  name: ['title', 'refName', 'eligibilityName', 'childName'],
+  title: ['name'],
+  date: ['examDate', 'dateOfExam'],
+  examDate: ['date'],
+  license: ['licenseNumber', 'licenseNo'],
+  licenseNumber: ['license'],
+  validUntil: ['licenseValidity', 'validity'],
+  licenseValidity: ['validUntil'],
+  grade: ['salaryGrade', 'salaryGradeStep', 'step'],
+  salaryGrade: ['grade'],
+  government: ['govService', 'gov'],
+  govService: ['government'],
+  value: ['skill', 'recognition', 'association'],
+  skill: ['value'],
+  recognition: ['value'],
+  association: ['value'],
+  contact: ['refTel', 'telephone', 'mobile'],
+  refTel: ['contact'],
+  address: ['refAddress'],
+  refAddress: ['address'],
+  company: ['office', 'department', 'agency'],
+  childName: ['name'],
+  childBirth: ['birthDate', 'dateOfBirth'],
+};
+
+export function getValue(data:PDS,key:string):string{
+  const [table,index,field]=key.split('.');
+  if(field){
+    const row=data.records[table]?.[Number(index)];
+    if(!row) return '';
+    if(row[field]!==undefined&&row[field]!=='') return row[field];
+    const aliases=COLUMN_ALIASES[field];
+    if(aliases){
+      for(const a of aliases){
+        if(row[a]!==undefined&&row[a]!=='') return row[a];
+      }
+    }
+    return '';
+  }
+  const val = data.values[key];
+  if(val !== undefined && val !== '') return val;
+  const alias = FIELD_ALIASES[key];
+  if(alias && data.values[alias] !== undefined && data.values[alias] !== '') return data.values[alias];
+  return '';
+}
 export const required=['surname','firstName','birthDate','birthPlace','sex','civilStatus','citizenship','residentialCity','residentialProvince','mobile','accomplished'];
 export function issues(data:PDS):string[]{const out=required.filter(k=>!data.values[k]?.trim()).map(k=>`${scalarFields.find(f=>f.key===k)?.label||k} is missing.`);for(const q of questions){if(!data.values[q.key])out.push(`Question ${q.key.slice(1)} needs an answer.`);if(data.values[q.key]==='Yes'&&!data.values[q.key+'Details'])out.push(`Question ${q.key.slice(1)} needs details.`)}if(data.values.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.values.email))out.push('Check your email address.');if(!data.photo)out.push('Add your recent passport-sized photo.');if(!data.signature)out.push('Add your signature or sign after printing.');return out}
 export function progress(data:PDS):number{

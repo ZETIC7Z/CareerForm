@@ -67,7 +67,7 @@ export default function FormEditor({data,section,onChange,signing,errors,onClear
               aria-label={`${t.label} ${i+1} ${c.label}`} 
               type={c.type==='date'?'date':'text'} 
               value={row[c.key]||''} 
-              placeholder={isSalary?'₱21,877.00':c.key==='to'?'Present or YYYY-MM-DD':c.label} 
+              placeholder={isSalary?'P21,877.00':c.key==='to'?'Present or YYYY-MM-DD':c.label} 
               onChange={e=>{
                 const val = e.target.value;
                 setRows(key,data.records[key].map((r,n)=>n===i?{...r,[c.key]:val}:r));

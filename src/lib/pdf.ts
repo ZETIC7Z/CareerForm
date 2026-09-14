@@ -39,7 +39,83 @@ async function asset(path:string){
   throw new Error(`Could not load ${path}. Please retry.`);
 }
 export function wrap(text:string,font:PDFFont,size:number,width:number){const lines:string[]=[];for(const paragraph of text.split('\n')){let line='';for(const word of paragraph.split(/\s+/)){if(!word)continue;if(font.widthOfTextAtSize(word,size)>width){if(line){lines.push(line);line=''}let part='';for(const char of word){if(font.widthOfTextAtSize(part+char,size)>width&&part){lines.push(part);part=''}part+=char}line=part}else if(line&&font.widthOfTextAtSize(line+' '+word,size)>width){lines.push(line);line=word}else line+=(line?' ':'')+word}lines.push(line)}return lines}
-function fit(page:PDFPage,font:PDFFont,text:string,b:Box,max=8){let size=Math.min(max,b.h*.8);let lines=wrap(text,font,size,b.w);while((lines.length*size*1.12>b.h)&&size>4.6){size-=.2;lines=wrap(text,font,size,b.w)}if(lines.length*size*1.12>b.h+.5)return false;const start=b.y+(b.h-lines.length*size*1.12)/2;lines.forEach((line,i)=>{const lineWidth=font.widthOfTextAtSize(line,size);const posX=b.w>100?Math.max(b.x+2,b.x+(b.w-lineWidth)/2):b.x;page.drawText(line,{x:posX,y:page.getHeight()-start-size-i*size*1.12,size,font,color:rgb(.07,.07,.07)})});return true}
+export function getFieldAlignment(key: string): 'left' | 'center' | 'right' {
+  if (
+    key === 'birthDate' ||
+    key === 'caseDate' ||
+    key === 'signatureDate' ||
+    key === 'accomplished' ||
+    key === 'extension' ||
+    key.endsWith('Extension') ||
+    key === 'bloodType' ||
+    key === 'height' ||
+    key === 'weight' ||
+    key.endsWith('Zip') ||
+    key === 'zipCode' ||
+    /\.(from|to|childBirth|examDate|licenseValidity|units|graduated|rating|salaryGrade|status|govService|hours|type)$/.test(key)
+  ) {
+    return 'center';
+  }
+  if (/\.salary$/.test(key)) {
+    return 'right';
+  }
+  return 'left';
+}
+
+function fit(
+  page: PDFPage,
+  font: PDFFont,
+  rawText: string,
+  b: Box,
+  max = 8,
+  forcedAlign?: 'left' | 'center' | 'right'
+) {
+  if (!rawText) return true;
+  const text = rawText
+    .replace(/₱/g, 'P')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[—–]/g, '-')
+    .replace(/•/g, '*');
+
+  const align = forcedAlign || 'left';
+  const padX = align === 'left' ? 3.5 : 2;
+  const availWidth = Math.max(8, b.w - padX * 2);
+
+  let size = Math.min(max, b.h * 0.78);
+  let lines = wrap(text, font, size, availWidth);
+  const lineGapRatio = 1.14;
+
+  while (lines.length * size * lineGapRatio > b.h && size > 4.5) {
+    size -= 0.2;
+    lines = wrap(text, font, size, availWidth);
+  }
+  if (lines.length * size * lineGapRatio > b.h + 0.6) return false;
+
+  const lineGap = size * lineGapRatio;
+  const cellCenter = page.getHeight() - b.y - b.h / 2;
+  const firstLineBaseline = cellCenter + ((lines.length - 1) * lineGap) / 2 - size * 0.28;
+
+  lines.forEach((line, i) => {
+    const lineWidth = font.widthOfTextAtSize(line, size);
+    let posX = b.x + padX;
+    if (align === 'center') {
+      posX = Math.max(b.x + 1, b.x + (b.w - lineWidth) / 2);
+    } else if (align === 'right') {
+      posX = Math.max(b.x + 1, b.x + b.w - lineWidth - padX);
+    }
+    const posY = firstLineBaseline - i * lineGap;
+    page.drawText(line, {
+      x: posX,
+      y: posY,
+      size,
+      font,
+      color: rgb(0.07, 0.07, 0.07),
+    });
+  });
+  return true;
+}
+
 function tick(page:PDFPage,x:number,y:number){page.drawLine({start:{x:x+.8,y:page.getHeight()-y-3},end:{x:x+2.7,y:page.getHeight()-y-5.1},thickness:1});page.drawLine({start:{x:x+2.7,y:page.getHeight()-y-5.1},end:{x:x+5.8,y:page.getHeight()-y-.3},thickness:1})}
 export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:Uint8Array}){
  const template=provided?.template??await memo(templates,'/api/template');
@@ -57,7 +133,15 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
    },
  };
 
- const draw=(key:string,text:string,box:Box)=>{if(!text)return;const label=fields.find(f=>f.key===key)?.label||key;if(!fit(pages[box.page],font,text,box)){overflow.push({label:key.includes('.')?`${key.split('.')[0]} record ${Number(key.split('.')[1])+1} — ${label}`:label,value:text});fit(pages[box.page],font,`[See note ${overflow.length}]`,box,5)}};
+ const draw=(key:string,text:string,box:Box)=>{
+   if(!text)return;
+   const label=fields.find(f=>f.key===key)?.label||key;
+   const align=getFieldAlignment(key);
+   if(!fit(pages[box.page],font,text,box,8,align)){
+     overflow.push({label:key.includes('.')?`${key.split('.')[0]} record ${Number(key.split('.')[1])+1} — ${label}`:label,value:text});
+     fit(pages[box.page],font,`[See note ${overflow.length}]`,box,5,'center');
+   }
+ };
  for(const [key,box0] of Object.entries(pdfMap)){
    let b={...box0};if(['idType','idNumber','idIssue'].includes(key)){b.x=116;b.w=98}
    if(key==='accomplished') continue; // Handled explicitly below with exact coordinates and formatting
@@ -93,14 +177,14 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
  if (effectiveData.signatureDate) {
    const formattedSigDate = formatFullDate(effectiveData.signatureDate);
    for (let i = 0; i < 3; i++) {
-     fit(pages[dateBoxes[i].page], font, formattedSigDate, dateBoxes[i], 7);
+     fit(pages[dateBoxes[i].page], font, formattedSigDate, dateBoxes[i], 7.5, 'center');
    }
  }
 
  // 2. Date Accomplished on Page 4: fills from data.values.accomplished (or signatureDate if set)
  const accomplishedDate = effectiveData.values.accomplished || (effectiveData.signatureDate ? formatFullDate(effectiveData.signatureDate) : '');
  if (accomplishedDate) {
-   fit(pages[3], font, formatFullDate(accomplishedDate), dateBoxes[3], 7);
+   fit(pages[3], font, formatFullDate(accomplishedDate), dateBoxes[3], 7.5, 'center');
  }
 
  // 3. Photo & Signatures with solid white masking to obscure red template placeholder text

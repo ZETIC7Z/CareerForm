@@ -10,3 +10,6 @@ output/
 playwright-report/
 test-results/
 *.log
+
+.vercel
+.env*

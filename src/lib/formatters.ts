@@ -6,12 +6,11 @@ export function formatSalary(value: string): string {
   if (!clean) return value;
   const num = parseFloat(clean);
   if (isNaN(num)) return value;
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
+  const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(num);
+  return `P${formatted}`;
 }
 
 export function formatSSS(value: string): string {
