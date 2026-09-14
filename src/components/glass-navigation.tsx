@@ -174,7 +174,7 @@ export default function GlassNavigation() {
           className={`md:hidden fixed inset-0 z-40 transition-all duration-500 ${
             isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
-          style={{ top: 0, backgroundColor: 'rgba(9, 11, 15, 0.95)', backdropFilter: 'blur(24px)' }}
+          style={{ top: 0, backgroundColor: 'var(--bg)', backdropFilter: 'blur(24px)' }}
         >
           <div className="flex flex-col h-full px-6 pt-24 pb-8">
             <div className="flex-1 flex flex-col justify-center gap-6">
@@ -183,7 +183,7 @@ export default function GlassNavigation() {
                   key={link.name}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`text-2xl sm:text-3xl font-bold tracking-tight transition-all duration-500 hover:text-[var(--accent,#efb530)] ${
+                  className={`text-2xl sm:text-3xl font-bold tracking-tight text-[var(--heading)] transition-all duration-500 hover:text-[var(--accent,#efb530)] ${
                     isMobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                   }`}
                   style={{ transitionDelay: isMobileMenuOpen ? `${i * 60}ms` : '0ms' }}
@@ -194,7 +194,7 @@ export default function GlassNavigation() {
               <button
                 type="button"
                 onClick={() => { setIsMobileMenuOpen(false); setGuideOpen(true); }}
-                className={`text-2xl sm:text-3xl font-bold tracking-tight text-left transition-all duration-500 hover:text-[var(--accent,#efb530)] flex items-center gap-3 ${
+                className={`text-2xl sm:text-3xl font-bold tracking-tight text-left text-[var(--heading)] transition-all duration-500 hover:text-[var(--accent,#efb530)] flex items-center gap-3 ${
                   isMobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                 }`}
                 style={{ transitionDelay: isMobileMenuOpen ? '300ms' : '0ms' }}
@@ -203,7 +203,7 @@ export default function GlassNavigation() {
               </button>
             </div>
 
-            <div className="pt-6 border-t border-white/10 flex flex-col gap-3">
+            <div className="pt-6 border-t border-[var(--line)] flex flex-col gap-3">
               {user ? (
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm font-medium">{user.name} ({user.email})</span>

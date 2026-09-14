@@ -49,6 +49,18 @@ export default function PdsPageNavigation({
   onJump,
   finished = false,
 }: PdsPageNavigationProps) {
+  const activeStepRef = React.useRef<HTMLButtonElement | null>(null);
+
+  React.useEffect(() => {
+    if (activeStepRef.current) {
+      activeStepRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [groupIndex, stepIndex]);
+
   return (
     <nav className="pds-top-nav-bar" role="tablist" aria-label="PDS Pages C1-C4">
       <div className="pds-nav-sequence">
@@ -105,6 +117,7 @@ export default function PdsPageNavigation({
                     return (
                       <button
                         key={st.id}
+                        ref={isStepActive ? activeStepRef : null}
                         type="button"
                         role="tab"
                         aria-selected={isStepActive}

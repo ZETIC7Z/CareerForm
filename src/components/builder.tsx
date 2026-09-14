@@ -3,7 +3,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import {FileSpreadsheet,Upload,Download,Mail,Maximize2,Check,Save,Trash2,ArrowLeft,ChevronDown,Settings2,FilePlus2,Printer,BookOpen} from 'lucide-react';
+import {FileSpreadsheet,Upload,Download,Mail,Maximize2,Check,Save,Trash2,ArrowLeft,ChevronDown,Settings2,FilePlus2,Printer,BookOpen,FileText,PenLine} from 'lucide-react';
 import {useRef} from 'react';
 import ThemeToggle from './theme-toggle';
 import ThemeAccentPicker from './theme-accent-picker';
@@ -42,6 +42,7 @@ async function fetchOfficialTemplate(){
 }
 
 export default function Builder(){
+  const [mobileTab,setMobileTab]=useState<'form'|'preview'>('form');
   const [importOpen,setImportOpen]=useState(false),[letterOpen,setLetterOpen]=useState(false);
   const [createOpen,setCreateOpen]=useState(false);
   const [guideOpen,setGuideOpen]=useState(false);
@@ -239,12 +240,12 @@ export default function Builder(){
 
       <div className="wc-right">
         {blocking.length>0&&<span className="wc-review-pill" title="Fields still needing attention">{blocking.length} to review</span>}
-        <button className="wc-btn wc-btn-secondary" title="Official CSC 2026 Guide to Filling Out PDS" onClick={()=>setGuideOpen(true)}><BookOpen size={14}/>Guide</button>
-        <button className="wc-btn wc-btn-secondary" title="Print document" onClick={handlePrint}><Printer size={14}/>Print</button>
-        <button className="wc-btn wc-btn-secondary" onClick={backup}><Save size={14}/>Save</button>
+        <button className="wc-btn wc-btn-secondary" title="Official CSC 2026 Guide to Filling Out PDS" onClick={()=>setGuideOpen(true)}><BookOpen size={14}/><span className="wc-btn-label">Guide</span></button>
+        <button className="wc-btn wc-btn-secondary" title="Print document" onClick={handlePrint}><Printer size={14}/><span className="wc-btn-label">Print</span></button>
+        <button className="wc-btn wc-btn-secondary" onClick={backup}><Save size={14}/><span className="wc-btn-label">Save</span></button>
         <div style={{position:'relative'}}>
           <button className="wc-btn wc-btn-secondary" title="Export your official PDS form" onClick={()=>setExportMenuOpen(v=>!v)} aria-haspopup="menu" aria-expanded={exportMenuOpen}>
-            <Download size={14}/>Export<ChevronDown size={12} aria-hidden="true"/>
+            <Download size={14}/><span className="wc-btn-label">Export</span><ChevronDown size={12} aria-hidden="true"/>
           </button>
           {exportMenuOpen&&<div className="wc-menu" role="menu" aria-label="Export options">
             <button role="menuitem" onClick={()=>{setExportMenuOpen(false);void exportXLSX()}}><FileSpreadsheet size={14}/>Download Excel (.xlsx)</button>
@@ -254,7 +255,7 @@ export default function Builder(){
           </div>}
         </div>
         <div ref={actionsRef} style={{position:'relative'}}>
-          <button className="wc-btn wc-btn-secondary" onClick={()=>setActionsMenuOpen(v=>!v)} aria-haspopup="menu" aria-expanded={actionsMenuOpen}><Settings2 size={14}/>Actions<ChevronDown size={12} aria-hidden="true"/></button>
+          <button className="wc-btn wc-btn-secondary" onClick={()=>setActionsMenuOpen(v=>!v)} aria-haspopup="menu" aria-expanded={actionsMenuOpen}><Settings2 size={14}/><span className="wc-btn-label">Actions</span><ChevronDown size={12} aria-hidden="true"/></button>
           {actionsMenuOpen&&<div className="wc-menu" role="menu" aria-label="Workspace actions">
             <button role="menuitem" onClick={()=>{setActionsMenuOpen(false);setCreateOpen(true)}}><FilePlus2 size={14}/>New document</button>
             <button role="menuitem" onClick={()=>{setActionsMenuOpen(false);setImportOpen(true)}}><Upload size={14}/>Import PDS…</button>
@@ -268,7 +269,7 @@ export default function Builder(){
       </div>
     </header>
 
-    {/* Dedicated Top Sub-Bar for Page Navigation (Exact location marked by red rectangle in Image 1) */}
+    {/* Dedicated Top Sub-Bar for Page Navigation */}
     <nav className="builder-top-subnav" aria-label="PDS page sections">
       <PdsPageNavigation
         groupIndex={groupIndex}
@@ -278,7 +279,31 @@ export default function Builder(){
       />
     </nav>
 
-    <div className="wc-body">
+    {/* Mobile Tab Toggle for Form Editor vs Official PDS Mirror (Shown only on screens < 1024px) */}
+    <div className="builder-mobile-tab-switch" role="tablist" aria-label="Mobile View Mode">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mobileTab === 'form'}
+        className={`mobile-tab-btn ${mobileTab === 'form' ? 'active' : ''}`}
+        onClick={() => setMobileTab('form')}
+      >
+        <PenLine size={14} />
+        <span>Edit Form</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mobileTab === 'preview'}
+        className={`mobile-tab-btn ${mobileTab === 'preview' ? 'active' : ''}`}
+        onClick={() => setMobileTab('preview')}
+      >
+        <FileText size={14} />
+        <span>Official PDS Mirror</span>
+      </button>
+    </div>
+
+    <div className={`wc-body mobile-view-${mobileTab}`}>
       <div className="wc-form-column">
         <main className="wc-content" ref={formScrollRef}>
           <h1 className="sr-only">Personal Data Sheet live workspace — CS Form 212 Revised 2026</h1>

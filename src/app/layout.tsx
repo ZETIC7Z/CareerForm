@@ -33,13 +33,41 @@ export const metadata:Metadata={
   openGraph:{title:'CareerForm PH — Free CSC PDS Builder (Revised 2026)',description:'Fill the official 2026 Personal Data Sheet with a live preview. Free, private, entirely in your browser.',type:'website',locale:'en_PH',siteName:'CareerForm PH'},
   icons:{icon:'/careerform-icon.png',apple:'/careerform-icon.png'},
 };
-export const viewport:Viewport={themeColor:[{media:'(prefers-color-scheme: light)',color:'#f2f5f8'},{media:'(prefers-color-scheme: dark)',color:'#050608'}]};
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+  ],
+};
 
-export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){
-  return <html lang="en" suppressHydrationWarning className={`${syne.variable} ${spaceGrotesk.variable} ${montserrat.variable}`}>
-    <head />
-    <body>
-      <SiteChrome>{children}</SiteChrome>
-    </body>
-  </html>;
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html
+      lang="en"
+      data-theme="dark"
+      suppressHydrationWarning
+      className={`${syne.variable} ${spaceGrotesk.variable} ${montserrat.variable}`}
+    >
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        />
+        <meta name="HandheldFriendly" content="true" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('careerform-theme')||'dark';document.documentElement.setAttribute('data-theme',t);if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`,
+          }}
+        />
+      </head>
+      <body>
+        <SiteChrome>{children}</SiteChrome>
+      </body>
+    </html>
+  );
 }
