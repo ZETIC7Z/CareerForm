@@ -1,6 +1,9 @@
 import { MongoClient, Db } from 'mongodb';
 
-const uri = process.env.MONGODB_URI || 'mongodb://pds_admin:PdsAdmin2026SecretKey!@ac-ffemcue-shard-00-00.oddnrse.mongodb.net:27017,ac-ffemcue-shard-00-01.oddnrse.mongodb.net:27017,ac-ffemcue-shard-00-02.oddnrse.mongodb.net:27017/auth_db?ssl=true&authSource=admin&replicaSet=atlas-a3jm8b-shard-0&retryWrites=true&w=majority';
+const DEFAULT_URI = 'mongodb://pds_admin:PdsAdmin2026SecretKey!@ac-ffemcue-shard-00-00.oddnrse.mongodb.net:27017,ac-ffemcue-shard-00-01.oddnrse.mongodb.net:27017,ac-ffemcue-shard-00-02.oddnrse.mongodb.net:27017/auth_db?ssl=true&authSource=admin&replicaSet=atlas-a3jm8b-shard-0&retryWrites=true&w=majority';
+let rawUri = process.env.MONGODB_URI || DEFAULT_URI;
+rawUri = rawUri.trim().replace(/^["']|["']$/g, '');
+const uri = (rawUri.startsWith('mongodb://') || rawUri.startsWith('mongodb+srv://')) ? rawUri : DEFAULT_URI;
 const dbName = process.env.MONGODB_DB || 'auth_db';
 
 let client: MongoClient | null = null;
