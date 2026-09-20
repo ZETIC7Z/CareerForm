@@ -1,6 +1,6 @@
 import {PDFDocument,PDFFont,PDFPage,rgb,StandardFonts} from 'pdf-lib';
 import mapping from './pdf-map.json';
-import {PDS,getValue,fields,tables,displayDate,formatFullDate,sortWorkRecordsDescending,questions} from './model';
+import {PDS,getValue,fields,tables,displayDate,displayDateCompact,formatFullDate,sortWorkRecordsDescending,questions} from './model';
 import {Letter,applyPlaceholders,longDate,salutation} from './letter';
 export type Box={page:number;x:number;y:number;w:number;h:number};
 export const pdfMap:Record<string,Box>=mapping;
@@ -146,7 +146,13 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
    let b={...box0};if(['idType','idNumber','idIssue'].includes(key)){b.x=116;b.w=98}
    if(key==='accomplished') continue; // Handled explicitly below with exact coordinates and formatting
    let value=getValue(effectiveData,key);if(!value)continue;
-   const field=fields.find(f=>f.key===key);if(field?.type==='date'||/\.(from|to)$/.test(key))value=displayDate(value);
+   const field=fields.find(f=>f.key===key);
+   const isWorkDate = /^work\.\d+\.(from|to)$/.test(key);
+   if (isWorkDate) {
+     value = displayDateCompact(value);
+   } else if (field?.type==='date'||/\.(from|to)$/.test(key)) {
+     value = displayDate(value);
+   }
    draw(key,value,b);
  }
  const p=pages[0];const v=effectiveData.values;
@@ -187,30 +193,33 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
    fit(pages[3], font, formatFullDate(accomplishedDate), dateBoxes[3], 7.5, 'center');
  }
 
- // 3. Photo & Signatures with solid white masking to obscure red template placeholder text
- for(const [key,boxes] of [['photo',[{page:3,x:476,y:498,w:74,h:95}]],['signature',signBoxes]] as const){
-   const image=effectiveData[key as 'photo' | 'signature'];if(!image)continue;
-   const embedded=image.startsWith('data:image/png')?await pdf.embedPng(image):await pdf.embedJpg(image);
-   for(const box of boxes){
-     if(key==='signature'){
-       pages[box.page].drawRectangle({
-         x: box.x + 1,
-         y: pages[box.page].getHeight() - box.y - box.h + 1,
-         width: box.w - 2,
-         height: box.h - 2,
-         color: rgb(1, 1, 1),
-       });
-     }
-     const scale=Math.min(box.w/embedded.width,box.h/embedded.height);
-     const w=embedded.width*scale,h=embedded.height*scale;
-     pages[box.page].drawImage(embedded,{
-       x:box.x+(box.w-w)/2,
-       y:pages[box.page].getHeight()-box.y-box.h+(box.h-h)/2,
-       width:w,
-       height:h
-     });
-   }
- }
+  // 3. Photo & Signatures — white mask only for JPEG (PNG keeps transparency)
+  for(const [key,boxes] of [['photo',[{page:3,x:476,y:498,w:74,h:95}]],['signature',signBoxes]] as const){
+    const image=effectiveData[key as 'photo' | 'signature'];if(!image)continue;
+    const isPng=image.startsWith('data:image/png');
+    const embedded=isPng?await pdf.embedPng(image):await pdf.embedJpg(image);
+    for(const box of boxes){
+      if(key==='signature'&&!isPng){
+        // Only draw white background for JPEG signatures (no transparency support).
+        // PNG signatures preserve their alpha channel for clean transparent backgrounds.
+        pages[box.page].drawRectangle({
+          x: box.x + 1,
+          y: pages[box.page].getHeight() - box.y - box.h + 1,
+          width: box.w - 2,
+          height: box.h - 2,
+          color: rgb(1, 1, 1),
+        });
+      }
+      const scale=Math.min(box.w/embedded.width,box.h/embedded.height);
+      const w=embedded.width*scale,h=embedded.height*scale;
+      pages[box.page].drawImage(embedded,{
+        x:box.x+(box.w-w)/2,
+        y:pages[box.page].getHeight()-box.y-box.h+(box.h-h)/2,
+        width:w,
+        height:h
+      });
+    }
+  }
  for(const [key,t] of Object.entries(tables))data.records[key]?.slice(t.capacity).forEach((r,i)=>overflow.push({label:`${t.label} — additional record ${t.capacity+i+1}`,value:t.columns.map(c=>`${c.label}: ${displayDate(r[c.key]||'N/A')}`).join('\n')}));
  // Supplemental text avoids clipping, omission or shrinking content to illegibility.
  if(overflow.length){let page=pdf.addPage([576,1008]),y=70;const heading=()=>{page.drawText('PERSONAL DATA SHEET — ADDITIONAL INFORMATION',{x:30,y:967,size:11,font});page.drawText([v.firstName,v.surname].filter(Boolean).join(' '),{x:30,y:947,size:9,font})};heading();for(let i=0;i<overflow.length;i++){const item=overflow[i];const lines=wrap(`${i+1}. ${item.label}\n${item.value}`,font,9,516);for(const line of lines){if(y>947){page=pdf.addPage([576,1008]);y=70;heading()}page.drawText(line,{x:30,y:1008-y,size:9,font});y+=13}y+=15}}

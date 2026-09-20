@@ -1,28 +1,9 @@
 import type {Metadata,Viewport} from 'next';
-import {Syne,Space_Grotesk,Montserrat} from 'next/font/google';
 import './globals.css';
 import SiteChrome from '@/components/site-chrome';
 
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  variable: '--font-montserrat',
-  weight: ['300','400','500','600','700','800','900'],
-  display: 'swap',
-});
-
-const syne = Syne({
-  subsets: ['latin'],
-  variable: '--font-syne',
-  weight: ['400','500','600','700','800'],
-  display: 'swap',
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-space',
-  weight: ['300','400','500','600','700'],
-  display: 'swap',
-});
+// System font stacks — no external fetch needed, builds work offline
+const fontVarsClass = 'font-vars-applied';
 
 export const metadata:Metadata={
   title:{default:'CareerForm PH — Free CSC PDS Builder (Revised 2026)',template:'%s · CareerForm PH'},
@@ -48,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       lang="en"
       data-theme="dark"
       suppressHydrationWarning
-      className={`${syne.variable} ${spaceGrotesk.variable} ${montserrat.variable}`}
+      className={fontVarsClass}
       style={{ backgroundColor: '#000000', colorScheme: 'dark' }}
     >
       <head>
@@ -58,6 +39,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
         <meta name="HandheldFriendly" content="true" />
         <meta name="color-scheme" content="dark light" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <style
           dangerouslySetInnerHTML={{
             __html: `

@@ -115,6 +115,8 @@ export function progress(data:PDS):number{
   return total>0?Math.min(100,Math.max(0,Math.round((filled/total)*100))):0;
 }
 export function displayDate(value:string){if(/^\d{4}-\d{2}-\d{2}$/.test(value)){const [y,m,d]=value.split('-');return `${d}/${m}/${y}`}return value}
+/** Compact date for narrow work experience columns: MM/YYYY (fits in ~35px cells) */
+export function displayDateCompact(value:string):string{if(/^\d{4}-\d{2}-\d{2}$/.test(value)){const [y,m]=value.split('-');return `${m}/${y}`}if(/^\d{4}$/.test(value))return value;return displayDate(value)}
 export function formatFullDate(value:string):string{
   if(!value)return '';
   const trimmed=value.trim();
@@ -148,4 +150,4 @@ export function sortWorkRecordsDescending(records: Row[]): Row[] {
     return fromB.localeCompare(fromA);
   });
 }
-export function download(bytes:Uint8Array|string,name:string,type:string){const blob=new Blob([typeof bytes==='string'?bytes:new Uint8Array(bytes)],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}
+export function download(bytes:Uint8Array|string,name:string,type:string){const blob=new Blob([typeof bytes==='string'?bytes:new Uint8Array(bytes)],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.appendChild(a);try{a.click()}catch{window.open(url,'_blank')}finally{setTimeout(()=>{a.remove();URL.revokeObjectURL(url)},30000)}}
