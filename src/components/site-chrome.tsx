@@ -38,7 +38,7 @@ function BrandLogo({footer=false}:{footer?:boolean}){
 
 export default function SiteChrome({children}:{children:React.ReactNode}){
   const pathname=usePathname();
-  const inWorkspace=pathname.startsWith('/builder') || pathname.startsWith('/sign');
+  const inWorkspace=pathname.startsWith('/builder') || pathname.startsWith('/sign') || pathname.startsWith('/coverletter');
   const [authOpen,setAuthOpen]=useState(false);
   const [mode,setMode]=useState<'signin'|'signup'>('signin');
 
