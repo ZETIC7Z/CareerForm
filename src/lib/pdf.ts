@@ -226,34 +226,38 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
  questions.forEach((q,i)=>{const answer=v[q.key];if(answer==='Yes'||answer==='No')tick(pages[3],qPositions[i][answer==='Yes'?0:1],qPositions[i][2]);if(answer==='Yes'&&v[q.key+'Details'])draw(q.key+'Details',v[q.key+'Details'],{page:3,x:443,y:detailY[i]-5,w:115,h:9})});
  if(v.caseDate)draw('caseDate',displayDate(v.caseDate),{page:3,x:469,y:182,w:90,h:10});if(v.caseStatus)draw('caseStatus',v.caseStatus,{page:3,x:444,y:195,w:116,h:10});
  
- // Exact signature and date boxes from official CSC CS Form 212 (Revised 2026)
- // Adjusted x to 99 to ensure signature doesn't bleed into or cover the gray "SIGNATURE" header
- const signBoxes = [
-   { page: 0, x: 99, y: 766, w: 275, h: 18 },  // Page 1: SIGNATURE row (data cell)
-   { page: 1, x: 99, y: 771, w: 210, h: 17 },  // Page 2: SIGNATURE row (data cell)
-   { page: 2, x: 99, y: 755, w: 280, h: 17 },  // Page 3: SIGNATURE row (data cell)
-   { page: 3, x: 240, y: 638, w: 198, h: 42 }, // Page 4: Signature (Sign inside the box)
- ];
- const dateBoxes = [
-   { page: 0, x: 410, y: 766, w: 155, h: 18 }, // Page 1: DATE row
-   { page: 1, x: 335, y: 771, w: 230, h: 17 }, // Page 2: DATE row
-   { page: 2, x: 410, y: 755, w: 155, h: 17 }, // Page 3: DATE row
-   { page: 3, x: 240, y: 684, w: 198, h: 14 }, // Page 4: Date Accomplished
- ];
+  // Exact signature and date boxes from official CSC CS Form 212 (Revised 2026) vector grid
+  // Cell bounds:
+  // Page 1 (index 0): data cell between x: 96.17 and 360.87, y_top: 763.16 to 782.30 (h: 19.15)
+  // Page 2 (index 1): data cell between x: 90.93 and 282.68, y_top: 766.69 to 787.22 (h: 20.54)
+  // Page 3 (index 2): data cell between x: 137.99 and 346.14, y_top: 751.95 to 770.49 (h: 18.54)
+  // Page 4 (index 3): box between x: 236.23 and 442.67, y_top: 630.00 to 674.00 (h: 44.00)
+  const signBoxes = [
+    { page: 0, x: 98, y: 764.5, w: 260, h: 16.5 },
+    { page: 1, x: 93, y: 768.0, w: 186, h: 17.5 },
+    { page: 2, x: 140, y: 753.5, w: 203, h: 15.5 },
+    { page: 3, x: 238, y: 630.0, w: 202, h: 44.0 },
+  ];
+  const dateBoxes = [
+    { page: 0, x: 432, y: 764.5, w: 132, h: 16.5 },
+    { page: 1, x: 356, y: 768.0, w: 218, h: 17.5 },
+    { page: 2, x: 441, y: 753.5, w: 130, h: 15.5 },
+    { page: 3, x: 238, y: 684.8, w: 202, h: 7.8 },  // Page 4: Date Accomplished cell strictly between y: 685.08 and 693.15
+  ];
 
- // 1. Signature Date on Pages 1-3: ONLY if user set up signature and checked date toggle
- if (effectiveData.signatureDate) {
-   const formattedSigDate = formatFullDate(effectiveData.signatureDate);
-   for (let i = 0; i < 3; i++) {
-     fit(pages[dateBoxes[i].page], font, formattedSigDate, dateBoxes[i], 7.5, 'center');
-   }
- }
+  // 1. Signature Date on Pages 1-3: ONLY if user set up signature and checked date toggle
+  if (effectiveData.signatureDate) {
+    const formattedSigDate = formatFullDate(effectiveData.signatureDate);
+    for (let i = 0; i < 3; i++) {
+      fit(pages[dateBoxes[i].page], font, formattedSigDate, dateBoxes[i], 7.5, 'center');
+    }
+  }
 
- // 2. Date Accomplished on Page 4: fills from data.values.accomplished (or signatureDate if set)
- const accomplishedDate = effectiveData.values.accomplished || (effectiveData.signatureDate ? formatFullDate(effectiveData.signatureDate) : '');
- if (accomplishedDate) {
-   fit(pages[3], font, formatFullDate(accomplishedDate), dateBoxes[3], 7.5, 'center');
- }
+  // 2. Date Accomplished on Page 4: fills from data.values.accomplished (or signatureDate if set)
+  const accomplishedDate = effectiveData.values.accomplished || (effectiveData.signatureDate ? formatFullDate(effectiveData.signatureDate) : '');
+  if (accomplishedDate) {
+    fit(pages[3], font, formatFullDate(accomplishedDate), dateBoxes[3], 6.8, 'center');
+  }
 
   // 3. Photo & Signatures
   for(const [key,boxes] of [['photo',[{page:3,x:476,y:498,w:74,h:95}]],['signature',signBoxes]] as const){
@@ -262,7 +266,9 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
     const embedded=isPng?await pdf.embedPng(image):await pdf.embedJpg(image);
     for(const box of boxes){
       if(key==='signature'){
-        // Mask the red template instruction placeholder inside the white data cell
+        // Mask the red template placeholder inside the cell using pure white
+        // All 4 signature cells are white in official CSC CS Form 212 template
+        // Padding preserves outer border lines and adjacent DATE headers cleanly
         pages[box.page].drawRectangle({
           x: box.x + 1,
           y: pages[box.page].getHeight() - box.y - box.h + 1,
@@ -271,19 +277,21 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
           color: rgb(1, 1, 1),
         });
       }
-      // Scale signature prominently so it is clearly visible and fills the signature area naturally
+      // Auto-scale signature prominently so it fills the signature area gracefully, ink is bold, and never crosses borders
       let scale: number;
       if (key === 'signature') {
-        const targetW = box.page === 3 ? 170 : 135;
-        const targetH = box.page === 3 ? 42 : 25;
+        const targetW = box.page === 3 ? Math.min(box.w - 16, 180) : Math.min(box.w - 20, 105);
+        const targetH = box.page === 3 ? 38 : Math.min(box.h - 3.5, 12.0);
         scale = Math.min(targetW / embedded.width, targetH / embedded.height);
       } else {
         scale = Math.min(box.w / embedded.width, box.h / embedded.height);
       }
       const w=embedded.width*scale,h=embedded.height*scale;
+      // On Pages 0-2 (Pages 1-3 of doc), center with slight upward offset so long descending loops (e.g. S, g, y) never touch bottom border
+      const offsetY = box.page === 3 ? (box.h - h) / 2 : (box.h - h) / 2 + 1.2;
       pages[box.page].drawImage(embedded,{
         x:box.x+(box.w-w)/2,
-        y:pages[box.page].getHeight()-box.y-box.h+(box.h-h)/2,
+        y:pages[box.page].getHeight()-box.y-box.h+offsetY,
         width:w,
         height:h
       });

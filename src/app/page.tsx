@@ -23,6 +23,7 @@ import Interactive3DCard from '@/components/interactive-3d-card';
 import {GOVERNMENT_JOBS, GUIDES_AND_RESOURCES} from '@/lib/government-jobs';
 import GovJobsBoard from '@/components/gov-jobs-board';
 import ScrollAnimations from '@/components/scroll-animations';
+import UpdatesBox from '@/components/updates-box';
 
 const TOOLS=[
   {
@@ -109,13 +110,30 @@ export default function Home(){
       </div>
     </section>
 
-    {/* TOOLS GRID */}
-    <section className="section section-alt">
+    {/* TOOLS GRID & LIVE PATCH NOTES */}
+    <section className="section section-alt" id="toolkit-and-updates">
       <div className="container">
-        <div className="section-head">
-          <span className="hero-kicker">Complete Civil Service Toolkit</span>
-          <h2>Everything you need to apply with confidence.</h2>
-          <p>Prepare official PDS documents, craft tailored application letters, and find real government job openings.</p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '32px',
+            alignItems: 'start',
+            marginBottom: '40px',
+          }}
+        >
+          <div>
+            <span className="hero-kicker">Complete Civil Service Toolkit</span>
+            <h2 style={{ fontSize: '36px', fontWeight: 800, margin: '12px 0 16px', lineHeight: 1.2 }}>
+              Everything you need to apply with confidence.
+            </h2>
+            <p className="muted" style={{ fontSize: '15px', lineHeight: 1.6, maxWidth: '520px', margin: 0 }}>
+              Prepare official PDS documents, craft tailored application letters, and find real government job openings — with real-time updates and fixes for the official CS Form 212 (Revised 2026).
+            </p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+            <UpdatesBox style={{ width: '100%', maxWidth: '520px' }} />
+          </div>
         </div>
         <div className="cards-3">
           {TOOLS.map(t=>(

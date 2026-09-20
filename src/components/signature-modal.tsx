@@ -66,16 +66,22 @@ export async function processSignatureImage(
 
       if (alreadyHasAlpha) {
         // Image already has transparency: recolor strokes to solid black with clean anti-aliasing
+        // and strip any remaining white/off-white background paper remnants
         for (let i = 0; i < d.length; i += 4) {
+          const r = d[i];
+          const g = d[i + 1];
+          const b = d[i + 2];
           const a = d[i + 3];
-          if (a > 15) {
+          const lum = r * 0.299 + g * 0.587 + b * 0.114;
+          // Strip white/light background pixels
+          if (a <= 15 || (lum > 220 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20)) {
+            d[i + 3] = 0;
+          } else {
             d[i] = inkR;
             d[i + 1] = inkG;
             d[i + 2] = inkB;
             // Boost stroke alpha for solid ink visibility over printed forms
             d[i + 3] = Math.min(255, Math.round(a * 1.4));
-          } else {
-            d[i + 3] = 0;
           }
         }
       } else {
