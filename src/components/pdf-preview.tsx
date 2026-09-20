@@ -119,7 +119,7 @@ export function LivePreview({bytes,page,onPage,error,onExpand}:Props){
         )}
       </div>
     </div>
-    <CanvasStage hintTitle="CS Form 212 · Revised 2026" busy={stageBusy}>
+    <CanvasStage hintTitle="CS Form 212 · Revised 2026" busy={stageBusy} onExpand={onExpand}>
       <div className={'preview-canvas-wrap'+(stageBusy?' is-loading':'')}>
         {bytes&&<canvas ref={canvas} aria-label={'Live official PDS preview, page '+(page+1)}/>}
         {stageBusy&&<PreviewFallback message={renderError?"Rendering again — the official form is just below this notice.":undefined}/>}

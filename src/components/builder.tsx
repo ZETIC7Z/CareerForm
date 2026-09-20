@@ -3,7 +3,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import {FileSpreadsheet,Upload,Download,Mail,Maximize2,Check,Save,Trash2,ArrowLeft,ChevronDown,Settings2,FilePlus2,Printer,BookOpen,FileText,PenLine} from 'lucide-react';
+import {FileSpreadsheet,Upload,Download,Mail,Maximize2,Check,Save,Trash2,ArrowLeft,ChevronDown,Settings2,FilePlus2,Printer,BookOpen,FileText,PenLine,Cloud,CloudCheck,WifiOff,LayoutDashboard,AlertCircle} from 'lucide-react';
 import {useRef} from 'react';
 import ThemeToggle from './theme-toggle';
 import ThemeAccentPicker from './theme-accent-picker';
@@ -12,12 +12,13 @@ import PdsPageNavigation from './pds-page-navigation';
 import PdsBeadScrollbar from './pds-bead-scrollbar';
 import ImportDialog from './import-dialog';
 import LetterDialog from './letter-dialog';
+import CoverLetterSelectionModal from './cover-letter-selection-modal';
 import NewDocumentModal from './new-document-modal';
 import CSCGuideModal from './csc-guide-modal';
 import {LivePreview,FullscreenPreview} from './pdf-preview';
 import {generatePDF} from '@/lib/pdf';
 import {generateXLSX} from '@/lib/xlsx';
-import {PDS,emptyPDS,validatedDraft,progress,download,issues} from '@/lib/model';
+import {PDS,emptyPDS,validatedDraft,progress,download,issues,getReviewIssues,ReviewIssue} from '@/lib/model';
 import {GROUPS} from '@/lib/groups';
 
 async function fetchOfficialTemplate(){
@@ -44,28 +45,35 @@ async function fetchOfficialTemplate(){
 export default function Builder(){
   const [mobileTab,setMobileTab]=useState<'form'|'preview'>('form');
   const [importOpen,setImportOpen]=useState(false),[letterOpen,setLetterOpen]=useState(false);
+  const [letterModalOpen,setLetterModalOpen]=useState(false);
   const [createOpen,setCreateOpen]=useState(false);
   const [guideOpen,setGuideOpen]=useState(false);
   const [exportMenuOpen,setExportMenuOpen]=useState(false);
   const [actionsMenuOpen,setActionsMenuOpen]=useState(false);
+  const [reviewMenuOpen,setReviewMenuOpen]=useState(false);
   const actionsRef=useRef<HTMLDivElement>(null);
+  const reviewRef=useRef<HTMLDivElement>(null);
   const formScrollRef=useRef<HTMLElement>(null);
 
   // Dismiss the header menus on outside click or Escape.
   useEffect(()=>{
-    if(!exportMenuOpen&&!actionsMenuOpen)return;
+    if(!exportMenuOpen&&!actionsMenuOpen&&!reviewMenuOpen)return;
     const onPointerDown=(event:PointerEvent)=>{
       const target=event.target as Node;
       if(actionsRef.current&&!actionsRef.current.contains(target)){setExportMenuOpen(false);setActionsMenuOpen(false)}
+      if(reviewRef.current&&!reviewRef.current.contains(target)){setReviewMenuOpen(false)}
     };
-    const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape'){setExportMenuOpen(false);setActionsMenuOpen(false)}};
+    const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape'){setExportMenuOpen(false);setActionsMenuOpen(false);setReviewMenuOpen(false)}};
     document.addEventListener('pointerdown',onPointerDown);
     document.addEventListener('keydown',onKey);
     return()=>{document.removeEventListener('pointerdown',onPointerDown);document.removeEventListener('keydown',onKey)};
-  },[exportMenuOpen,actionsMenuOpen]);
+  },[exportMenuOpen,actionsMenuOpen,reviewMenuOpen]);
   const [bytes,setBytes]=useState<Uint8Array|null>(null),[pdfError,setPdfError]=useState(''),[previewPage,setPreviewPage]=useState(0);
   const [fullOpen,setFullOpen]=useState(false),[finished,setFinished]=useState(false);
   const [data,setData]=useState<PDS>(emptyPDS),[ready,setReady]=useState(false),[saved,setSaved]=useState('Saved on this device'),[toast,setToast]=useState('');
+  const [projectId,setProjectId]=useState<string|null>(null);
+  const [projectTitle,setProjectTitle]=useState<string>('');
+  const [syncStatus,setSyncStatus]=useState<'synced'|'saving'|'offline'|'local'>('local');
   const [groupIndex,setGroupIndex]=useState(0);
   const [stepIndex,setStepIndex]=useState(0);
 
@@ -77,32 +85,141 @@ export default function Builder(){
     setPreviewPage(pdfPage);
   };
 
-  // "New document" modal on a truly fresh start — the VeriWorkly entry ritual.
-  // Returning users (a draft exists) go straight to their workspace.
+  // Initial load: restore from localStorage (offline-first) and sync from MongoDB Atlas
   useEffect(()=>{
-    const id=setTimeout(()=>{
-      try{
-        const raw=localStorage.getItem('zeticuz-draft');
-        if(raw){
-          setData(validatedDraft(JSON.parse(raw)));
-        }else if(!sessionStorage.getItem('careerform-create-seen')){
-          setCreateOpen(true);
-          sessionStorage.setItem('careerform-create-seen','1');
-        }
-      }catch{setToast('The previous draft could not be restored. You can import a saved backup.')}
-      setReady(true);
-    },0);
-    return()=>clearTimeout(id);
-  },[]);
+    let cancelled = false;
+    const urlParams = new URLSearchParams(window.location.search);
+    const pId = urlParams.get('project');
 
+    const init = async () => {
+      if (pId) {
+        setProjectId(pId);
+        // 1. Instant offline load from local cache
+        const cached = localStorage.getItem(`pds_project_${pId}`);
+        if (cached) {
+          try {
+            setData(validatedDraft(JSON.parse(cached)));
+            setSyncStatus('local');
+          } catch {}
+        }
+
+        // 2. Cloud load from MongoDB Atlas
+        try {
+          const res = await fetch(`/api/projects/${pId}`);
+          if (res.ok && !cancelled) {
+            const json = await res.json();
+            if (json?.ok && json?.project) {
+              setProjectTitle(json.project.title || 'Untitled PDS');
+              if (json.project.data && Object.keys(json.project.data).length > 0) {
+                const draft = validatedDraft(json.project.data);
+                setData(draft);
+                localStorage.setItem(`pds_project_${pId}`, JSON.stringify(draft));
+              }
+              setSyncStatus('synced');
+              setSaved('Cloud Synced');
+            }
+          }
+        } catch {
+          setSyncStatus('offline');
+          setSaved('Saved Offline');
+        }
+      } else {
+        // Standalone draft mode
+        try {
+          const raw = localStorage.getItem('zeticuz-draft');
+          if (raw) {
+            setData(validatedDraft(JSON.parse(raw)));
+          } else if (!sessionStorage.getItem('careerform-create-seen')) {
+            setCreateOpen(true);
+            sessionStorage.setItem('careerform-create-seen', '1');
+          }
+        } catch {
+          setToast('The previous draft could not be restored. You can import a saved backup.');
+        }
+      }
+
+      if (!cancelled) setReady(true);
+    };
+
+    void init();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Offline-first local backup + debounced MongoDB Atlas auto-sync
   useEffect(()=>{
-    if(!ready)return;
-    const id=setTimeout(()=>{
-      try{localStorage.setItem('zeticuz-draft',JSON.stringify(data));setSaved('Saved on this device')}
-      catch{setSaved('Storage unavailable — download a backup')}
-    },400);
-    return()=>clearTimeout(id);
-  },[data,ready]);
+    if(!ready) return;
+
+    // Save to local device storage instantly (survives network drops and power shutoffs)
+    try {
+      if (projectId) {
+        localStorage.setItem(`pds_project_${projectId}`, JSON.stringify(data));
+      }
+      localStorage.setItem('zeticuz-draft', JSON.stringify(data));
+      if (!projectId) {
+        setSaved('Saved on this device');
+        setSyncStatus('local');
+      }
+    } catch {
+      setSaved('Storage unavailable — download a backup');
+    }
+
+    if (!projectId) return;
+
+    setSyncStatus('saving');
+    setSaved('Syncing to Cloud…');
+
+    const syncTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data,
+            title: projectTitle || undefined,
+          }),
+        });
+
+        if (res.ok) {
+          const resJson = await res.json();
+          if (resJson?.ok) {
+            setSyncStatus('synced');
+            setSaved('Cloud Synced');
+          } else {
+            setSyncStatus('offline');
+            setSaved('Saved Offline');
+          }
+        } else {
+          setSyncStatus('offline');
+          setSaved('Saved Offline');
+        }
+      } catch {
+        setSyncStatus('offline');
+        setSaved('Saved Offline');
+      }
+    }, 1500);
+
+    return () => clearTimeout(syncTimer);
+  }, [data, ready, projectId, projectTitle]);
+
+  // Auto-sync when reconnecting to network
+  useEffect(()=>{
+    if (!projectId || !ready) return;
+    const handleOnline = async () => {
+      try {
+        setSyncStatus('saving');
+        await fetch(`/api/projects/${projectId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data, title: projectTitle || undefined }),
+        });
+        setSyncStatus('synced');
+        setSaved('Cloud Synced');
+      } catch {}
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [projectId, ready, data, projectTitle]);
 
   useEffect(()=>{
     if(!toast)return;
@@ -161,6 +278,7 @@ export default function Builder(){
       setData(emptyPDS());setFinished(false);setToast('Draft cleared.');
     }
   };
+  const reviewIssues=useMemo(()=>getReviewIssues(data),[data]);
   const blocking=useMemo(()=>issues(data),[data]);
   const exportPDF=async()=>{
     try{
@@ -223,7 +341,7 @@ export default function Builder(){
   return <div className="app-shell workspace-app">
     <header className="workspace-chrome">
       <div className="wc-left">
-        <Link className="wc-back" href="/" aria-label="Back to home" title="Back to home"><ArrowLeft size={17}/></Link>
+        <Link className="wc-back" href={projectId ? "/dashboard" : "/"} aria-label={projectId ? "Back to dashboard" : "Back to home"} title={projectId ? "Back to dashboard" : "Back to home"}><ArrowLeft size={17}/></Link>
         <Link className="wc-brand" href="/" aria-label="CareerForm PH home">
           <span className="font-bold tracking-tight text-[var(--heading)] text-sm sm:text-base flex items-center gap-1.5 select-none">
             CareerForm
@@ -232,14 +350,98 @@ export default function Builder(){
             </span>
           </span>
         </Link>
+        {projectTitle && (
+          <span className="wc-project-chip hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-white/5 border border-white/10 text-white max-w-[180px] truncate" title={projectTitle}>
+            {projectTitle}
+          </span>
+        )}
         <div className="wc-progress-pill" aria-label={`${progress(data)}% filled`} title={`${progress(data)}% of PDS completed`}>
           <span className="track"><i style={{width:`${progress(data)}%`}}/></span>
           <span className="progress-pct">{progress(data)}%</span>
         </div>
+
+        {projectId && (
+          <div className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium" style={{
+            background: syncStatus === 'synced' ? 'rgba(16, 185, 129, 0.12)' : syncStatus === 'saving' ? 'rgba(6, 182, 212, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+            color: syncStatus === 'synced' ? '#10b981' : syncStatus === 'saving' ? '#38bdf8' : '#fbbf24',
+            border: `1px solid ${syncStatus === 'synced' ? 'rgba(16, 185, 129, 0.25)' : syncStatus === 'saving' ? 'rgba(6, 182, 212, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
+          }}>
+            {syncStatus === 'synced' && <><CloudCheck size={12} /> <span>Synced</span></>}
+            {syncStatus === 'saving' && <><Cloud size={12} className="animate-pulse" /> <span>Syncing…</span></>}
+            {syncStatus === 'offline' && <><WifiOff size={12} /> <span>Offline (Saved)</span></>}
+          </div>
+        )}
       </div>
 
       <div className="wc-right">
-        {blocking.length>0&&<span className="wc-review-pill" title="Fields still needing attention">{blocking.length} to review</span>}
+        {projectId && (
+          <Link href="/dashboard" className="wc-btn wc-btn-secondary" title="View all projects in Dashboard">
+            <LayoutDashboard size={14}/>
+            <span className="wc-btn-label">Dashboard</span>
+          </Link>
+        )}
+        {reviewIssues.length > 0 && (
+          <div
+            ref={reviewRef}
+            className="review-pill-container relative"
+            onMouseEnter={() => setReviewMenuOpen(true)}
+            onMouseLeave={() => setReviewMenuOpen(false)}
+          >
+            <button
+              type="button"
+              className="wc-review-pill cursor-pointer flex items-center gap-1.5 transition-all duration-200 hover:brightness-110 active:scale-95"
+              onClick={() => setReviewMenuOpen(v => !v)}
+              aria-haspopup="true"
+              aria-expanded={reviewMenuOpen}
+              title="Point mouse or click to inspect missing items and their exact areas"
+            >
+              <AlertCircle size={12} className="text-amber-400 shrink-0" />
+              <span>{reviewIssues.length} to review</span>
+              <ChevronDown size={11} className={`transition-transform duration-200 shrink-0 ${reviewMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {reviewMenuOpen && (
+              <div
+                className="review-inspector-popover"
+                role="region"
+                aria-label="Items needing attention"
+              >
+                <div className="review-popover-header">
+                  <div className="flex items-center gap-2">
+                    <span className="review-popover-count">{reviewIssues.length}</span>
+                    <span className="font-bold text-xs text-white">Items to Complete</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400">Click item to jump</span>
+                </div>
+
+                <div className="review-popover-list">
+                  {reviewIssues.map((issue) => (
+                    <button
+                      key={issue.id}
+                      type="button"
+                      className="review-popover-item group"
+                      onClick={() => {
+                        setReviewMenuOpen(false);
+                        handleJump(issue.groupIndex, issue.stepIndex);
+                      }}
+                    >
+                      <div className="review-item-main">
+                        <span className="review-item-title">{issue.label}</span>
+                        <div className="review-item-location">
+                          <span className="review-item-section">{issue.section}</span>
+                          <span className="review-item-badge">{issue.page}</span>
+                        </div>
+                      </div>
+                      <span className="review-item-action">
+                        Jump →
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <button className="wc-btn wc-btn-secondary" title="Official CSC 2026 Guide to Filling Out PDS" onClick={()=>setGuideOpen(true)}><BookOpen size={14}/><span className="wc-btn-label">Guide</span></button>
         <button className="wc-btn wc-btn-secondary" title="Print document" onClick={handlePrint}><Printer size={14}/><span className="wc-btn-label">Print</span></button>
         <button className="wc-btn wc-btn-secondary" onClick={backup}><Save size={14}/><span className="wc-btn-label">Save</span></button>
@@ -259,7 +461,7 @@ export default function Builder(){
           {actionsMenuOpen&&<div className="wc-menu" role="menu" aria-label="Workspace actions">
             <button role="menuitem" onClick={()=>{setActionsMenuOpen(false);setCreateOpen(true)}}><FilePlus2 size={14}/>New document</button>
             <button role="menuitem" onClick={()=>{setActionsMenuOpen(false);setImportOpen(true)}}><Upload size={14}/>Import PDS…</button>
-            <button role="menuitem" onClick={()=>{setActionsMenuOpen(false);setLetterOpen(true)}}><Mail size={14}/>Compose letters</button>
+            <button role="menuitem" onClick={()=>{setActionsMenuOpen(false);setLetterModalOpen(true)}}><Mail size={14}/>Compose letters Studio</button>
             <button role="menuitem" onClick={()=>{setActionsMenuOpen(false);backup()}}><Save size={14}/>Save backup (JSON)</button>
             <button role="menuitem" className="danger" onClick={()=>{setActionsMenuOpen(false);reset()}}><Trash2 size={14}/>Clear draft</button>
           </div>}
@@ -316,10 +518,11 @@ export default function Builder(){
       </aside>
     </div>
 
-    {createOpen&&<NewDocumentModal open onClose={()=>setCreateOpen(false)} onCreatePDS={()=>setCreateOpen(false)} onCreateLetter={()=>{setCreateOpen(false);setLetterOpen(true)}} onImport={()=>setImportOpen(true)}/>}
+    {createOpen&&<NewDocumentModal open onClose={()=>setCreateOpen(false)} onCreatePDS={()=>setCreateOpen(false)} onCreateLetter={()=>{setCreateOpen(false);setLetterModalOpen(true)}} onImport={()=>setImportOpen(true)}/>}
     {guideOpen&&<CSCGuideModal open onClose={()=>setGuideOpen(false)}/>}
     {importOpen&&<ImportDialog onClose={()=>setImportOpen(false)} onApply={applyImport}/>}
     {letterOpen&&<LetterDialog data={data} onClose={()=>setLetterOpen(false)}/>}
+    {letterModalOpen&&<CoverLetterSelectionModal open={letterModalOpen} onClose={()=>setLetterModalOpen(false)}/>}
     {fullOpen&&<FullscreenPreview bytes={bytes} onClose={()=>setFullOpen(false)} onDownloadPDF={exportPDF} onDownloadXLSX={exportXLSX}/>}
     {pdfError&&<div className="toast" role="alert">{pdfError}</div>}
     {toast&&<div className="toast" role="status">{toast}</div>}

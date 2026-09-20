@@ -320,9 +320,25 @@ export async function letterPDF(letter:Letter,pds:PDS){
  y-=10;put(`Subject: ${applyPlaceholders(letter.subject,letter,pds)}`,10.5,bold,15);
  y-=8;page.drawText(`Dear ${salutation(letter)},`,{x:M,y,size:10.5,font});y-=24;
  paragraph(applyPlaceholders(letter.body,letter,pds));
- y-=8;if(y<150)next();page.drawText('Respectfully yours,', {x:M,y,size:10.5,font});y-=44;
- page.drawLine({start:{x:M,y},end:{x:M+180,y},thickness:.7});y-=15;
- put(letter.senderName||applicant,10.5,bold,14);put(letter.senderAddress,8.5,font,12);
+  y-=8;if(y<150)next();page.drawText('Respectfully yours,', {x:M,y,size:10.5,font});
+  const sigData = letter.signature || pds.signature;
+  if (sigData && sigData.startsWith('data:image/')) {
+    try {
+      const base64 = sigData.split(',')[1];
+      const sigBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      const sigImg = sigData.includes('png') ? await doc.embedPng(sigBytes) : await doc.embedJpg(sigBytes);
+      const scaled = sigImg.scaleToFit(140, 36);
+      page.drawImage(sigImg, {
+        x: M + 10,
+        y: y - 38,
+        width: scaled.width,
+        height: scaled.height,
+      });
+    } catch {}
+  }
+  y-=44;
+  page.drawLine({start:{x:M,y},end:{x:M+180,y},thickness:.7});y-=15;
+  put(letter.senderName||applicant,10.5,bold,14);put(letter.senderAddress,8.5,font,12);
  if(letter.senderContact)page.drawText(letter.senderContact,{x:M,y:y-2,size:8.5,font});
  doc.setTitle(`${letter.kind==='application'?'Application':'Transmittal'} letter — CS Form 212 Revised 2026`);doc.setCreator('Zeticuz PDS Builder');
  return new Uint8Array(await doc.save());

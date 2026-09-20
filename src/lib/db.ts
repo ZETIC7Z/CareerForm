@@ -34,3 +34,21 @@ export async function getDb(): Promise<Db> {
   const client = await getMongoClient();
   return client.db(dbName);
 }
+
+export interface PDSProject {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  data: any;
+  completionRate?: number;
+  lastModified: string;
+  createdAt: string;
+  isFavorite?: boolean;
+}
+
+export async function getProjectsCollection() {
+  const db = await getDb();
+  return db.collection<PDSProject>('pds_projects');
+}
+

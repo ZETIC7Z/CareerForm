@@ -3,16 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu, X, ArrowRight, UserCheck, LogOut, BookOpen } from 'lucide-react';
+import { Menu, X, ArrowRight, UserCheck, LogOut, BookOpen, LayoutDashboard } from 'lucide-react';
 import AuthModal, { UserSession } from './auth-modal';
 import CSCGuideModal from './csc-guide-modal';
+import ToolsSelectorModal from './tools-selector-modal';
 import ThemeToggle from './theme-toggle';
 import ThemeAccentPicker from './theme-accent-picker';
+import LiveTimeWeather from './live-time-weather';
 
 const navLinks = [
   { name: 'Home', href: '/' },
   { name: 'PDS Builder', href: '/builder' },
-  { name: 'Cover Letters', href: '/builder?tool=letter' },
+  { name: 'Cover Letters', href: '/coverletter' },
   { name: 'WES Annex', href: '/wes' },
   { name: 'About', href: '/about' },
 ];
@@ -23,6 +25,7 @@ export default function GlassNavigation() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [guideOpen, setGuideOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [user, setUser] = useState<UserSession | null>(null);
 
   useEffect(() => {
@@ -56,13 +59,22 @@ export default function GlassNavigation() {
     setIsMobileMenuOpen(false);
   };
 
+  const dynamicNavLinks = navLinks;
+
   return (
     <>
       <header
         className={`fixed z-50 transition-all duration-500 ${
-          isScrolled ? 'top-3 left-3 right-3 md:top-4 md:left-6 md:right-6' : 'top-0 left-0 right-0'
+          isScrolled ? 'top-1 left-3 right-3 md:top-2 md:left-6 md:right-6' : 'top-0 left-0 right-0'
         }`}
       >
+        {/* Realtime Clock & Auto-detected Weather (Site Center Top) */}
+        <div className="w-full flex justify-center pt-2 pb-1 pointer-events-none">
+          <div className="pointer-events-auto">
+            <LiveTimeWeather />
+          </div>
+        </div>
+
         <nav
           className={`mx-auto transition-all duration-500 ${
             isScrolled || isMobileMenuOpen
@@ -86,8 +98,8 @@ export default function GlassNavigation() {
             </Link>
 
             {/* Desktop Navigation Links */}
-            <div className="hidden md:flex items-center gap-7 lg:gap-9">
-              {navLinks.map(link => (
+            <div className="hidden md:flex items-center gap-6 lg:gap-8">
+              {dynamicNavLinks.map(link => (
                 <Link
                   key={link.name}
                   href={link.href}
@@ -114,6 +126,13 @@ export default function GlassNavigation() {
 
               {user ? (
                 <div className="flex items-center gap-2.5">
+                  <Link
+                    href="/dashboard"
+                    className="btn btn-primary h-8 lg:h-9 px-3.5 text-xs font-semibold rounded-full shadow-md flex items-center gap-1.5"
+                  >
+                    <LayoutDashboard size={13} />
+                    <span>Dashboard</span>
+                  </Link>
                   <span className="user-profile-chip" title={user.email}>
                     <UserCheck size={14} />
                     <span className="truncate max-w-[120px]">{user.name || user.email}</span>
@@ -146,12 +165,13 @@ export default function GlassNavigation() {
                 </>
               )}
 
-              <Link
-                href="/builder"
-                className="btn btn-ghost h-8 lg:h-9 px-3.5 text-xs font-semibold rounded-full hidden xl:inline-flex items-center gap-1"
+              <button
+                type="button"
+                onClick={() => setToolsOpen(true)}
+                className="btn btn-ghost h-8 lg:h-9 px-3.5 text-xs font-semibold rounded-full hidden xl:inline-flex items-center gap-1 cursor-pointer"
               >
                 Launch Builder <ArrowRight size={13} />
-              </Link>
+              </button>
             </div>
 
             {/* Mobile Menu Toggle Button & Theme Picker */}
@@ -178,7 +198,7 @@ export default function GlassNavigation() {
         >
           <div className="flex flex-col h-full px-6 pt-24 pb-8">
             <div className="flex-1 flex flex-col justify-center gap-6">
-              {navLinks.map((link, i) => (
+              {dynamicNavLinks.map((link, i) => (
                 <Link
                   key={link.name}
                   href={link.href}
@@ -205,9 +225,18 @@ export default function GlassNavigation() {
 
             <div className="pt-6 border-t border-[var(--line)] flex flex-col gap-3">
               {user ? (
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm font-medium">{user.name} ({user.email})</span>
-                  <button onClick={handleSignOut} className="text-xs text-red-400">Sign out</button>
+                <div className="flex flex-col gap-2">
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="btn btn-primary h-11 text-sm font-semibold rounded-xl flex items-center justify-center gap-2"
+                  >
+                    <LayoutDashboard size={16} /> Open Dashboard
+                  </Link>
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-xs font-medium text-slate-300">{user.name} ({user.email})</span>
+                    <button onClick={handleSignOut} className="text-xs text-red-400">Sign out</button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex gap-3">
@@ -242,6 +271,7 @@ export default function GlassNavigation() {
       )}
 
       {guideOpen && <CSCGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />}
+      {toolsOpen && <ToolsSelectorModal open={toolsOpen} onClose={() => setToolsOpen(false)} />}
     </>
   );
 }

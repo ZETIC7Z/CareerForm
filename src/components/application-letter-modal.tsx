@@ -74,7 +74,11 @@ export default function ApplicationLetterModal({job, onClose, onProceedToPds}: P
 
   // Generate Letter Text based on Version & Details
   const generatedLetter = useMemo(() => {
-    const todayStr = 'September 15, 2026';
+    const todayStr = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
     const salutation = recipientName ? `Dear ${recipientName}:` : 'Dear Sir/Madam:';
     const skillsList = selectedSkills.length > 0
       ? `in ${selectedSkills.join(', ')}`

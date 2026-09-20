@@ -90,11 +90,11 @@ export default function SiteChrome({children}:{children:React.ReactNode}){
       <div className="footer-base" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
         <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
           <Image
-            src="/zeticuz-logo.png"
+            src="/zeticuz-logo.svg"
             alt="ZETICUZ Developer Logo"
-            width={48}
+            width={84}
             height={28}
-            style={{height: '24px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 8px rgba(239,68,68,0.3))'}}
+            style={{height: '26px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 10px rgba(6,182,212,0.3))'}}
           />
           <span style={{fontSize: '13px', fontWeight: 600, letterSpacing: '0.04em', color: 'var(--foreground)'}}>
             SITE DEVELOPER BY: <strong style={{color: '#ef4444'}}>ZETICUZ</strong>

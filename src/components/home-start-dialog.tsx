@@ -3,9 +3,11 @@
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {FileText, Upload, Mail, ArrowRight, X, Sparkles} from 'lucide-react';
+import CoverLetterSelectionModal from './cover-letter-selection-modal';
 
 export default function HomeStartDialog() {
   const [open, setOpen] = useState(false);
+  const [letterModalOpen, setLetterModalOpen] = useState(false);
   const router = useRouter();
 
   return (
@@ -67,7 +69,7 @@ export default function HomeStartDialog() {
                 className="nd-card group"
                 onClick={() => {
                   setOpen(false);
-                  router.push('/builder?tool=letter');
+                  setLetterModalOpen(true);
                 }}
               >
                 <span className="nd-card-top">
@@ -105,6 +107,13 @@ export default function HomeStartDialog() {
             </div>
           </div>
         </div>
+      )}
+
+      {letterModalOpen && (
+        <CoverLetterSelectionModal
+          open={letterModalOpen}
+          onClose={() => setLetterModalOpen(false)}
+        />
       )}
     </>
   );

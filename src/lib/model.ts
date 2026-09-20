@@ -86,7 +86,117 @@ export function getValue(data:PDS,key:string):string{
   return '';
 }
 export const required=['surname','firstName','birthDate','birthPlace','sex','civilStatus','citizenship','residentialCity','residentialProvince','mobile','accomplished'];
-export function issues(data:PDS):string[]{const out=required.filter(k=>!data.values[k]?.trim()).map(k=>`${scalarFields.find(f=>f.key===k)?.label||k} is missing.`);for(const q of questions){if(!data.values[q.key])out.push(`Question ${q.key.slice(1)} needs an answer.`);if(data.values[q.key]==='Yes'&&!data.values[q.key+'Details'])out.push(`Question ${q.key.slice(1)} needs details.`)}if(data.values.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.values.email))out.push('Check your email address.');if(!data.photo)out.push('Add your recent passport-sized photo.');if(!data.signature)out.push('Add your signature or sign after printing.');return out}
+
+export interface ReviewIssue {
+  id: string;
+  label: string;
+  section: string;
+  page: string;
+  groupIndex: number;
+  stepIndex: number;
+}
+
+export function getReviewIssues(data: PDS): ReviewIssue[] {
+  const out: ReviewIssue[] = [];
+  const personalFieldLabels: Record<string, string> = {
+    surname: 'Surname',
+    firstName: 'First Name',
+    birthDate: 'Date of Birth',
+    birthPlace: 'Place of Birth',
+    sex: 'Sex at Birth',
+    civilStatus: 'Civil Status',
+    citizenship: 'Citizenship',
+    residentialCity: 'Residential City / Municipality',
+    residentialProvince: 'Residential Province',
+    mobile: 'Mobile Number',
+  };
+
+  for (const [key, label] of Object.entries(personalFieldLabels)) {
+    if (!data.values[key]?.trim()) {
+      out.push({
+        id: `missing-${key}`,
+        label: `${label} is missing`,
+        section: 'Personal Information',
+        page: 'Page 1',
+        groupIndex: 0,
+        stepIndex: 0,
+      });
+    }
+  }
+
+  if (data.values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.values.email)) {
+    out.push({
+      id: 'invalid-email',
+      label: 'Email address format is invalid',
+      section: 'Personal Information',
+      page: 'Page 1',
+      groupIndex: 0,
+      stepIndex: 0,
+    });
+  }
+
+  for (const q of questions) {
+    const qNum = q.key.slice(1).toUpperCase();
+    if (!data.values[q.key]) {
+      out.push({
+        id: `missing-${q.key}`,
+        label: `Question ${qNum} requires an answer`,
+        section: 'Declarations · Questions 34–40',
+        page: 'Page 4',
+        groupIndex: 3,
+        stepIndex: 0,
+      });
+    } else if (data.values[q.key] === 'Yes' && !data.values[q.key + 'Details']?.trim()) {
+      out.push({
+        id: `details-${q.key}`,
+        label: `Question ${qNum} requires supporting details`,
+        section: 'Declarations · Questions 34–40',
+        page: 'Page 4',
+        groupIndex: 3,
+        stepIndex: 0,
+      });
+    }
+  }
+
+  if (!data.values['accomplished']?.trim()) {
+    out.push({
+      id: 'missing-accomplished',
+      label: 'Date Accomplished is required',
+      section: 'References & Signature',
+      page: 'Page 4',
+      groupIndex: 3,
+      stepIndex: 1,
+    });
+  }
+
+  if (!data.photo) {
+    out.push({
+      id: 'missing-photo',
+      label: 'Recent passport photo is missing',
+      section: 'Photo & Identification',
+      page: 'Page 4',
+      groupIndex: 3,
+      stepIndex: 1,
+    });
+  }
+
+  if (!data.signature) {
+    out.push({
+      id: 'missing-signature',
+      label: 'Signature is missing (or sign after printing)',
+      section: 'References & Signature',
+      page: 'Page 4',
+      groupIndex: 3,
+      stepIndex: 1,
+    });
+  }
+
+  return out;
+}
+
+export function issues(data:PDS):string[]{
+  return getReviewIssues(data).map(i => i.label);
+}
 export function progress(data:PDS):number{
   if(!data||!data.values)return 0;
   let filled=0;

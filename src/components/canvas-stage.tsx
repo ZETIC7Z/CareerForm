@@ -21,12 +21,14 @@ export default function CanvasStage({
   hintTitle,
   busy,
   controls='zoom',
+  onExpand,
 }:{
   children:ReactNode;
   /** Document name shown in the "Drag canvas or use arrow keys" pill. */
   hintTitle:string;
   busy?:boolean;
   controls?:'zoom'|'none';
+  onExpand?:()=>void;
 }){
   const [zoom,setZoom]=useState(FIT_ZOOM);
   const [pan,setPan]=useState({x:0,y:0});
@@ -69,7 +71,7 @@ export default function CanvasStage({
         <button type="button" className="livebar-btn" aria-label="Zoom out" title="Zoom out" onClick={()=>updateZoom(zoom-ZOOM_STEP)} disabled={zoom<=MIN_ZOOM}><ZoomOut size={15}/></button>
         <span className="livebar-zoom" aria-live="polite" aria-atomic="true">{zoom}%</span>
         <button type="button" className="livebar-btn" aria-label="Zoom in" title="Zoom in" onClick={()=>updateZoom(zoom+ZOOM_STEP)} disabled={zoom>=MAX_ZOOM}><ZoomIn size={15}/></button>
-        <button type="button" className="livebar-btn" aria-label="Fit to view" title="Fit to view" onClick={()=>updateZoom(FIT_ZOOM)}><Maximize2 size={14}/></button>
+        <button type="button" className="livebar-btn" aria-label="Fullscreen preview" title="Fullscreen Preview (Finish & Review Shortcut)" onClick={onExpand || (()=>updateZoom(FIT_ZOOM))}><Maximize2 size={14}/></button>
         <button type="button" className="livebar-btn" aria-label="Reset view" title="Reset view" onClick={resetCanvas}><RotateCcw size={14}/></button>
       </div>}
 

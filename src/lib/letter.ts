@@ -1,5 +1,5 @@
 import {PDS} from './model';
-export type Letter={kind:'application'|'transmittal';date:string;recipientTitle:string;recipientName:string;organization:string;organizationAddress:string;position:string;subject:string;body:string;senderName:string;senderAddress:string;senderContact:string};
+export type Letter={kind:'application'|'transmittal';date:string;recipientTitle:string;recipientName:string;organization:string;organizationAddress:string;position:string;subject:string;body:string;senderName:string;senderAddress:string;senderContact:string;signature?:string};
 export const letterPlaceholders=['POSITION','ORGANIZATION','NAME','ADDRESS','MOBILE','EMAIL','EDUCATION','ELIGIBILITY','TODAY'] as const;
 export function pdsName(pds:PDS){return [pds.values.firstName,pds.values.middleName,pds.values.surname,pds.values.extension].filter(Boolean).join(' ')}
 export function pdsAddress(pds:PDS){const v=pds.values;return [[v.residentialHouse,v.residentialStreet].filter(Boolean).join(' '),[v.residentialVillage,v.residentialBarangay].filter(Boolean).join(', '),[v.residentialCity,v.residentialProvince].filter(Boolean).join(', ')].filter(Boolean).join('\n')}

@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -24,6 +27,9 @@ import {GOVERNMENT_JOBS, GUIDES_AND_RESOURCES} from '@/lib/government-jobs';
 import GovJobsBoard from '@/components/gov-jobs-board';
 import ScrollAnimations from '@/components/scroll-animations';
 import UpdatesBox from '@/components/updates-box';
+import HeroShowcaseCarousel from '@/components/hero-showcase-carousel';
+import TipJarModal, { TipJarButton } from '@/components/tip-jar-modal';
+import CoverLetterSelectionModal from '@/components/cover-letter-selection-modal';
 
 const TOOLS=[
   {
@@ -36,7 +42,7 @@ const TOOLS=[
     cta:'Build my PDS',
   },
   {
-    href:'/builder?tool=letter',
+    href:'/coverletter',
     icon:Mail,
     tag:'Live now',
     tagClass:'tag gold',
@@ -69,10 +75,31 @@ const STATS=[
 ];
 
 export default function Home(){
+  const [tipOpen, setTipOpen] = useState(false);
+  const [letterModalOpen, setLetterModalOpen] = useState(false);
+
   return <>
     <ScrollAnimations />
     <section className="hero" style={{ position: 'relative', overflow: 'hidden' }}>
       <div className="hero-bg" aria-hidden/>
+
+      {/* Ambient Giant Watermark Text (CodePen PwWMZPv) */}
+      <div className="hero-bg-text" aria-hidden="true">
+        CAREERFORM
+      </div>
+
+      {/* Hero Top-Right Tip Jar (Image 1 & Image 2) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '32px',
+          right: '36px',
+          zIndex: 25,
+        }}
+      >
+        <TipJarButton onClick={() => setTipOpen(true)} />
+      </div>
+
       <AmbientAsciiScene />
       <div className="container hero-grid" style={{ position: 'relative', zIndex: 2 }}>
         <div>
@@ -89,26 +116,14 @@ export default function Home(){
             <span><MonitorSmartphone size={15}/> Works offline once loaded</span>
           </div>
         </div>
-        <div className="hero-visual">
-          <Interactive3DCard className="relative flex justify-center w-full max-w-[440px]" maxTilt={9} perspective={1200}>
-            <div className="hero-product-frame">
-              <div className="hero-frame-bar">
-                <span className="hero-frame-dots"><i/><i/><i/></span>
-                <span className="hero-frame-title">CS Form 212 · Revised 2026 Workspace</span>
-                <span className="hero-frame-badge"><i/> LIVE MIRROR</span>
-              </div>
-              <div className="hero-frame-body">
-                <div className="hero-frame-sheet">
-                  <Image src="/template-preview.png" alt="Official CS Form 212 Revised 2026 live sheet mirror" width={612} height={792} priority sizes="(max-width:1100px) 92vw, 440px"/>
-                </div>
-              </div>
-            </div>
-            <span className="hero-chip one"><i/>Live mirror updates as you type</span>
-            <span className="hero-chip two"><i/>Exports print-ready 8 × 14 in PDF</span>
-          </Interactive3DCard>
+        <div className="hero-visual" style={{ display: 'flex', justifyContent: 'center' }}>
+          <HeroShowcaseCarousel />
         </div>
       </div>
     </section>
+
+    {/* Tip Jar Neon Modal */}
+    <TipJarModal open={tipOpen} onClose={() => setTipOpen(false)} />
 
     {/* TOOLS GRID & LIVE PATCH NOTES */}
     <section className="section section-alt" id="toolkit-and-updates">
@@ -143,7 +158,17 @@ export default function Home(){
                 <h3>{t.title}</h3>
                 <p>{t.desc}</p>
                 <div className="tool-meta"><span className={t.tagClass}>{t.tag}</span><span className="tag">Free</span></div>
-                <Link className="btn btn-primary" href={t.href}>{t.cta} <ArrowRight size={15}/></Link>
+                {t.title === 'Create cover letter' ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary cursor-pointer flex items-center justify-center gap-1.5"
+                    onClick={() => setLetterModalOpen(true)}
+                  >
+                    {t.cta} <ArrowRight size={15}/>
+                  </button>
+                ) : (
+                  <Link className="btn btn-primary" href={t.href}>{t.cta} <ArrowRight size={15}/></Link>
+                )}
               </article>
             </Interactive3DCard>
           ))}
@@ -256,5 +281,12 @@ export default function Home(){
         </div>
       </div>
     </section>
+
+    {letterModalOpen && (
+      <CoverLetterSelectionModal
+        open={letterModalOpen}
+        onClose={() => setLetterModalOpen(false)}
+      />
+    )}
   </>;
 }

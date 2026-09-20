@@ -58,6 +58,9 @@ export default function AuthModal({
       setTimeout(() => {
         onSuccess?.(data.user);
         onClose();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/dashboard';
+        }
       }, 700);
     } catch {
       setError('Connection error. Please check your network.');

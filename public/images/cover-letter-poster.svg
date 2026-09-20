@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 720" width="100%" height="100%">
+  <defs>
+    <linearGradient id="clBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="sheetBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <rect width="600" height="720" rx="24" fill="url(#clBg)"/>
+  
+  <g filter="url(#cardShadow)">
+    <rect x="44" y="36" width="512" height="648" rx="14" fill="url(#sheetBg)" stroke="#e2e8f0" stroke-width="1.5"/>
+
+    <g transform="translate(68, 64)">
+      <circle cx="28" cy="28" r="24" fill="#0284c7" fill-opacity="0.1" stroke="#0284c7" stroke-width="2"/>
+      <path d="M 28 14 L 33 24 L 43 25 L 35 32 L 38 42 L 28 36 L 18 42 L 21 32 L 13 25 L 23 24 Z" fill="#0284c7"/>
+      
+      <text x="68" y="20" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="800" fill="#0f172a" letter-spacing="1">REPUBLIC OF THE PHILIPPINES</text>
+      <text x="68" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#64748b" letter-spacing="0.5">APPLICATION COVER LETTER &amp; INTENT</text>
+      
+      <rect x="350" y="10" width="110" height="24" rx="12" fill="#ecfdf5" stroke="#10b981" stroke-width="1"/>
+      <text x="405" y="26" font-family="system-ui, sans-serif" font-size="9.5" font-weight="700" fill="#059669" text-anchor="middle">CSC COMPLIANT</text>
+    </g>
+
+    <line x1="68" y1="130" x2="532" y2="130" stroke="#cbd5e1" stroke-width="1.5"/>
+
+    <g transform="translate(68, 155)" font-family="system-ui, sans-serif">
+      <text x="0" y="0" font-size="11" font-weight="600" fill="#475569">DATE: October 14, 2026</text>
+      
+      <text x="0" y="24" font-size="12" font-weight="700" fill="#0f172a">THE APPOINTING AUTHORITY</text>
+      <text x="0" y="42" font-size="11" fill="#475569">Human Resource Management Division</text>
+      <text x="0" y="58" font-size="11" fill="#475569">Civil Service Commission · Central Office, Quezon City</text>
+
+      <text x="0" y="92" font-size="11.5" font-weight="700" fill="#0284c7">SUBJECT: Application for Administrative Officer V (SG-18)</text>
+      <text x="0" y="108" font-size="10.5" fill="#64748b">Plantilla Item No. OSEC-CSCB-ADOF5-2026-102</text>
+    </g>
+
+    <g transform="translate(68, 290)">
+      <text x="0" y="0" font-family="system-ui, sans-serif" font-size="11.5" font-weight="600" fill="#1e293b">Dear Sir / Madame:</text>
+
+      <rect x="0" y="16" width="460" height="8" rx="4" fill="#cbd5e1"/>
+      <rect x="0" y="32" width="440" height="8" rx="4" fill="#e2e8f0"/>
+      <rect x="0" y="48" width="455" height="8" rx="4" fill="#e2e8f0"/>
+      <rect x="0" y="64" width="360" height="8" rx="4" fill="#e2e8f0"/>
+
+      <rect x="0" y="90" width="460" height="8" rx="4" fill="#cbd5e1"/>
+      <rect x="0" y="106" width="430" height="8" rx="4" fill="#e2e8f0"/>
+      <rect x="0" y="122" width="450" height="8" rx="4" fill="#e2e8f0"/>
+      <rect x="0" y="138" width="280" height="8" rx="4" fill="#e2e8f0"/>
+
+      <rect x="0" y="164" width="440" height="8" rx="4" fill="#cbd5e1"/>
+      <rect x="0" y="180" width="390" height="8" rx="4" fill="#e2e8f0"/>
+      <rect x="0" y="196" width="220" height="8" rx="4" fill="#e2e8f0"/>
+    </g>
+
+    <g transform="translate(68, 520)">
+      <text x="0" y="0" font-family="system-ui, sans-serif" font-size="11.5" fill="#334155">Very respectfully yours,</text>
+      
+      <path d="M 10 30 C 30 16, 50 14, 65 28 C 80 43, 95 10, 120 26 C 140 38, 160 18, 185 23 C 205 28, 220 16, 240 20" fill="none" stroke="#1d4ed8" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M 35 36 C 70 36, 140 38, 210 34" fill="none" stroke="#1d4ed8" stroke-width="1.8" stroke-linecap="round"/>
+
+      <text x="0" y="60" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#0f172a">JUAN S. DELA CRUZ, MPA</text>
+      <text x="0" y="76" font-family="system-ui, sans-serif" font-size="10.5" fill="#64748b">Career Service Professional Eligible (CSC Exam: 88.45%)</text>
+      <text x="0" y="92" font-family="system-ui, sans-serif" font-size="10.5" fill="#64748b">Applicant · Contact: juan.delacruz@gov.ph | 0917-888-2026</text>
+    </g>
+
+    <g transform="translate(420, 560)">
+      <circle cx="36" cy="36" r="34" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,2"/>
+      <circle cx="36" cy="36" r="28" fill="rgba(245, 158, 11, 0.08)"/>
+      <text x="36" y="32" font-family="system-ui, sans-serif" font-size="8" font-weight="800" fill="#d97706" text-anchor="middle">VERIFIED</text>
+      <text x="36" y="44" font-family="system-ui, sans-serif" font-size="7.5" font-weight="700" fill="#d97706" text-anchor="middle">OFFICIAL</text>
+    </g>
+  </g>
+</svg>
