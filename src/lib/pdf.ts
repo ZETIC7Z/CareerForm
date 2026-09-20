@@ -173,26 +173,52 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
  if(v.civilStatus==='Other'&&v.civilOther)draw('civilOther',v.civilOther,{page:0,x:135,y:234,w:115,h:10});
 
   // Fix Vocational / Trade Course label on Page 0 (official template text has misaligned baseline where VOCATIONAL was printed over SECONDARY)
+  // Use exact template gray and REGULAR font (Helvetica 5.5pt, black) matching ELEMENTARY, SECONDARY, COLLEGE, GRADUATE STUDIES
+  const levelGray = rgb(234 / 255, 234 / 255, 234 / 255);
+  // Keep background rectangle strictly inside cell interior, extending down to 290.0 to cover template TRADE baseline artifact
   pages[0].drawRectangle({
-    x: 14,
-    y: pages[0].getHeight() - 719,
-    width: 83.5,
-    height: 21,
-    color: rgb(0.91, 0.91, 0.91),
+    x: 12.0,
+    y: 290.0,
+    width: 83.6,
+    height: 21.5,
+    color: levelGray,
   });
   pages[0].drawText('VOCATIONAL /', {
-    x: 22,
-    y: pages[0].getHeight() - 704,
-    size: 5.2,
-    font: fontBold,
-    color: rgb(0.12, 0.12, 0.12),
+    x: 21.95,
+    y: 303.8,
+    size: 5.5,
+    font,
+    color: rgb(0, 0, 0),
   });
   pages[0].drawText('TRADE COURSE', {
-    x: 20,
-    y: pages[0].getHeight() - 712,
-    size: 5.2,
-    font: fontBold,
-    color: rgb(0.12, 0.12, 0.12),
+    x: 21.95,
+    y: 296.5,
+    size: 5.5,
+    font,
+    color: rgb(0, 0, 0),
+  });
+
+  // Explicitly draw the cell borders to guarantee crisp, clean separation
+  // Line between VOCATIONAL and COLLEGE across the entire table
+  pages[0].drawLine({
+    start: { x: 11.36, y: 292.43 },
+    end: { x: 566.51, y: 292.43 },
+    thickness: 0.52,
+    color: rgb(0, 0, 0),
+  });
+  // Line between SECONDARY and VOCATIONAL
+  pages[0].drawLine({
+    start: { x: 11.36, y: 312.09 },
+    end: { x: 566.51, y: 312.09 },
+    thickness: 0.52,
+    color: rgb(0, 0, 0),
+  });
+  // Vertical line separating LEVEL column from NAME OF SCHOOL column
+  pages[0].drawLine({
+    start: { x: 96.15, y: 292.43 },
+    end: { x: 96.15, y: 312.09 },
+    thickness: 0.52,
+    color: rgb(0, 0, 0),
   });
 
  const qPositions=[[383,443.6,63],[383,443.6,76.1],[382.1,444.6,120.6],[382.1,446.5,162],[381.6,448.3,213.6],[381.2,448.3,253.5],[382.1,463.2,288],[383,464.1,312.7],[382.1,463.2,342.4],[382.1,464.1,411.9],[382.1,464.1,432.7],[382.1,464.1,455.1]];
@@ -229,15 +255,14 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
    fit(pages[3], font, formatFullDate(accomplishedDate), dateBoxes[3], 7.5, 'center');
  }
 
-  // 3. Photo & Signatures — white mask only for JPEG (PNG keeps transparency)
+  // 3. Photo & Signatures
   for(const [key,boxes] of [['photo',[{page:3,x:476,y:498,w:74,h:95}]],['signature',signBoxes]] as const){
     const image=effectiveData[key as 'photo' | 'signature'];if(!image)continue;
     const isPng=image.startsWith('data:image/png');
     const embedded=isPng?await pdf.embedPng(image):await pdf.embedJpg(image);
     for(const box of boxes){
-      if(key==='signature'&&!isPng){
-        // Only draw white background for JPEG signatures (no transparency support).
-        // PNG signatures preserve their alpha channel for clean transparent backgrounds.
+      if(key==='signature'){
+        // Mask the red template instruction placeholder inside the white data cell
         pages[box.page].drawRectangle({
           x: box.x + 1,
           y: pages[box.page].getHeight() - box.y - box.h + 1,
@@ -246,7 +271,15 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
           color: rgb(1, 1, 1),
         });
       }
-      const scale=Math.min(box.w/embedded.width,box.h/embedded.height);
+      // Scale signature prominently so it is clearly visible and fills the signature area naturally
+      let scale: number;
+      if (key === 'signature') {
+        const targetW = box.page === 3 ? 170 : 135;
+        const targetH = box.page === 3 ? 42 : 25;
+        scale = Math.min(targetW / embedded.width, targetH / embedded.height);
+      } else {
+        scale = Math.min(box.w / embedded.width, box.h / embedded.height);
+      }
       const w=embedded.width*scale,h=embedded.height*scale;
       pages[box.page].drawImage(embedded,{
         x:box.x+(box.w-w)/2,

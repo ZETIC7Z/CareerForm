@@ -5,7 +5,7 @@ import Image from 'next/image';
 import {ChevronLeft,ChevronRight,ZoomIn,ZoomOut,X,Maximize2,Move,Download,FileSpreadsheet} from 'lucide-react';
 import CanvasStage from './canvas-stage';
 
-type Props={bytes:Uint8Array|null;page:number;onPage:(page:number)=>void;error?:string};
+type Props={bytes:Uint8Array|null;page:number;onPage:(page:number)=>void;error?:string;onExpand?:()=>void};
 type RenderRequest={bytes:Uint8Array|null;page:number;zoom:number};
 type RenderState={canvas:React.RefObject<HTMLCanvasElement|null>;count:number;loading:boolean;error:string};
 
@@ -96,7 +96,7 @@ function PreviewFallback({message}:{message?:string}){
  * zoomed from the floating livebar — never scrolled, so it stays put while the
  * form editor on the left scrolls.
  */
-export function LivePreview({bytes,page,onPage,error}:Props){
+export function LivePreview({bytes,page,onPage,error,onExpand}:Props){
   const {canvas,count,loading,error:renderError}=useRender(bytes,page,100);
   const visibleError=error||renderError;
   const stageBusy=Boolean(loading||renderError||!bytes);
@@ -112,6 +112,11 @@ export function LivePreview({bytes,page,onPage,error}:Props){
         <button type="button" className="pager-btn" aria-label="Previous preview page" disabled={page===0||loading} onClick={()=>onPage(Math.max(0,page-1))}><ChevronLeft size={14}/></button>
         <span className="preview-page-label">C{page+1} of {count}</span>
         <button type="button" className="pager-btn" aria-label="Next preview page" disabled={page>=count-1||loading} onClick={()=>onPage(Math.min(count-1,page+1))}><ChevronRight size={14}/></button>
+        {onExpand && (
+          <button type="button" className="pager-btn" aria-label="Open fullscreen preview" title="Fullscreen Preview" onClick={onExpand}>
+            <Maximize2 size={14}/>
+          </button>
+        )}
       </div>
     </div>
     <CanvasStage hintTitle="CS Form 212 · Revised 2026" busy={stageBusy}>

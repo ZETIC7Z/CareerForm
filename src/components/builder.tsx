@@ -312,7 +312,7 @@ export default function Builder(){
         <PdsBeadScrollbar targetRef={formScrollRef} />
       </div>
       <aside className="wc-preview">
-        <LivePreview bytes={bytes} page={previewPage} onPage={setPreviewPage} error={pdfError}/>
+        <LivePreview bytes={bytes} page={previewPage} onPage={setPreviewPage} error={pdfError} onExpand={()=>setFullOpen(true)}/>
       </aside>
     </div>
 
