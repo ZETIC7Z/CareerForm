@@ -68,7 +68,8 @@ function fit(
   rawText: string,
   b: Box,
   max = 8,
-  forcedAlign?: 'left' | 'center' | 'right'
+  forcedAlign?: 'left' | 'center' | 'right',
+  singleLine = false
 ) {
   if (!rawText) return true;
   const text = rawText
@@ -79,14 +80,21 @@ function fit(
     .replace(/•/g, '*');
 
   const align = forcedAlign || 'left';
-  const padX = align === 'left' ? 3.5 : 2;
+  const padX = align === 'left' ? 3.5 : 1.5;
   const availWidth = Math.max(8, b.w - padX * 2);
 
   let size = Math.min(max, b.h * 0.78);
   let lines = wrap(text, font, size, availWidth);
   const lineGapRatio = 1.14;
 
-  while (lines.length * size * lineGapRatio > b.h && size > 4.5) {
+  if (singleLine) {
+    while (lines.length > 1 && size > 4.0) {
+      size -= 0.2;
+      lines = wrap(text, font, size, availWidth);
+    }
+  }
+
+  while (lines.length * size * lineGapRatio > b.h && size > 4.0) {
     size -= 0.2;
     lines = wrap(text, font, size, availWidth);
   }
@@ -122,6 +130,7 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
  const pdf=await PDFDocument.load(template);
  // Official standard PDF Helvetica — 100% reliable across all browsers and devices without external font dependencies
  const font=await pdf.embedFont(StandardFonts.Helvetica);
+ const fontBold=await pdf.embedFont(StandardFonts.HelveticaBold);
  const pages=pdf.getPages();const overflow:{label:string;value:string}[]=[];
 
  // Automatically sort work experience records in reverse-chronological order (most recent first)
@@ -137,7 +146,9 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
    if(!text)return;
    const label=fields.find(f=>f.key===key)?.label||key;
    const align=getFieldAlignment(key);
-   if(!fit(pages[box.page],font,text,box,8,align)){
+   const field=fields.find(f=>f.key===key);
+   const isSingleLine = field?.type === 'date' || /\.(from|to|birthDate|graduated|examDate|validUntil)$/.test(key) || key.startsWith('id') || key === 'tin' || key === 'umid' || key === 'pagibig' || key === 'philhealth' || key === 'psn' || key === 'mobile' || key === 'telephone';
+   if(!fit(pages[box.page],font,text,box,8,align,isSingleLine)){
      overflow.push({label:key.includes('.')?`${key.split('.')[0]} record ${Number(key.split('.')[1])+1} — ${label}`:label,value:text});
      fit(pages[box.page],font,`[See note ${overflow.length}]`,box,5,'center');
    }
@@ -160,16 +171,41 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
  for(const [key,choices] of Object.entries(options)){const xy=choices[v[key]];if(xy)tick(p,...xy)}
  if(v.citizenshipCountry)draw('citizenshipCountry',v.citizenshipCountry,{page:0,x:445,y:184,w:115,h:10});
  if(v.civilStatus==='Other'&&v.civilOther)draw('civilOther',v.civilOther,{page:0,x:135,y:234,w:115,h:10});
+
+  // Fix Vocational / Trade Course label on Page 0 (official template text has misaligned baseline where VOCATIONAL was printed over SECONDARY)
+  pages[0].drawRectangle({
+    x: 14,
+    y: pages[0].getHeight() - 719,
+    width: 83.5,
+    height: 21,
+    color: rgb(0.91, 0.91, 0.91),
+  });
+  pages[0].drawText('VOCATIONAL /', {
+    x: 22,
+    y: pages[0].getHeight() - 704,
+    size: 5.2,
+    font: fontBold,
+    color: rgb(0.12, 0.12, 0.12),
+  });
+  pages[0].drawText('TRADE COURSE', {
+    x: 20,
+    y: pages[0].getHeight() - 712,
+    size: 5.2,
+    font: fontBold,
+    color: rgb(0.12, 0.12, 0.12),
+  });
+
  const qPositions=[[383,443.6,63],[383,443.6,76.1],[382.1,444.6,120.6],[382.1,446.5,162],[381.6,448.3,213.6],[381.2,448.3,253.5],[382.1,463.2,288],[383,464.1,312.7],[382.1,463.2,342.4],[382.1,464.1,411.9],[382.1,464.1,432.7],[382.1,464.1,455.1]];
  const detailY=[91,101,139,180,231,268,302,327,359,424,446,468];
  questions.forEach((q,i)=>{const answer=v[q.key];if(answer==='Yes'||answer==='No')tick(pages[3],qPositions[i][answer==='Yes'?0:1],qPositions[i][2]);if(answer==='Yes'&&v[q.key+'Details'])draw(q.key+'Details',v[q.key+'Details'],{page:3,x:443,y:detailY[i]-5,w:115,h:9})});
  if(v.caseDate)draw('caseDate',displayDate(v.caseDate),{page:3,x:469,y:182,w:90,h:10});if(v.caseStatus)draw('caseStatus',v.caseStatus,{page:3,x:444,y:195,w:116,h:10});
  
  // Exact signature and date boxes from official CSC CS Form 212 (Revised 2026)
+ // Adjusted x to 99 to ensure signature doesn't bleed into or cover the gray "SIGNATURE" header
  const signBoxes = [
-   { page: 0, x: 75, y: 766, w: 305, h: 18 },  // Page 1: SIGNATURE row
-   { page: 1, x: 75, y: 771, w: 230, h: 17 },  // Page 2: SIGNATURE row
-   { page: 2, x: 95, y: 755, w: 285, h: 17 },  // Page 3: SIGNATURE row
+   { page: 0, x: 99, y: 766, w: 275, h: 18 },  // Page 1: SIGNATURE row (data cell)
+   { page: 1, x: 99, y: 771, w: 210, h: 17 },  // Page 2: SIGNATURE row (data cell)
+   { page: 2, x: 99, y: 755, w: 280, h: 17 },  // Page 3: SIGNATURE row (data cell)
    { page: 3, x: 240, y: 638, w: 198, h: 42 }, // Page 4: Signature (Sign inside the box)
  ];
  const dateBoxes = [

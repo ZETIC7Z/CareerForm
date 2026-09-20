@@ -320,7 +320,7 @@ export default function Builder(){
     {guideOpen&&<CSCGuideModal open onClose={()=>setGuideOpen(false)}/>}
     {importOpen&&<ImportDialog onClose={()=>setImportOpen(false)} onApply={applyImport}/>}
     {letterOpen&&<LetterDialog data={data} onClose={()=>setLetterOpen(false)}/>}
-    {fullOpen&&<FullscreenPreview bytes={bytes} onClose={()=>setFullOpen(false)}/>}
+    {fullOpen&&<FullscreenPreview bytes={bytes} onClose={()=>setFullOpen(false)} onDownloadPDF={exportPDF} onDownloadXLSX={exportXLSX}/>}
     {pdfError&&<div className="toast" role="alert">{pdfError}</div>}
     {toast&&<div className="toast" role="status">{toast}</div>}
   </div>;

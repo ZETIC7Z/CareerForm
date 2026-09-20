@@ -116,7 +116,20 @@ export function progress(data:PDS):number{
 }
 export function displayDate(value:string){if(/^\d{4}-\d{2}-\d{2}$/.test(value)){const [y,m,d]=value.split('-');return `${d}/${m}/${y}`}return value}
 /** Compact date for narrow work experience columns: MM/YYYY (fits in ~35px cells) */
-export function displayDateCompact(value:string):string{if(/^\d{4}-\d{2}-\d{2}$/.test(value)){const [y,m]=value.split('-');return `${m}/${y}`}if(/^\d{4}$/.test(value))return value;return displayDate(value)}
+export function displayDateCompact(value:string):string{
+  if(!value) return '';
+  const trimmed = value.trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(trimmed)){
+    const [y,m]=trimmed.split('-');
+    return `${m}/${y}`;
+  }
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)){
+    const [,m,y]=trimmed.split('/');
+    return `${m}/${y}`;
+  }
+  if(/^\d{4}$/.test(trimmed))return trimmed;
+  return displayDate(trimmed);
+}
 export function formatFullDate(value:string):string{
   if(!value)return '';
   const trimmed=value.trim();

@@ -2,7 +2,7 @@
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Image from 'next/image';
-import {ChevronLeft,ChevronRight,ZoomIn,ZoomOut,X,Maximize2,Move} from 'lucide-react';
+import {ChevronLeft,ChevronRight,ZoomIn,ZoomOut,X,Maximize2,Move,Download,FileSpreadsheet} from 'lucide-react';
 import CanvasStage from './canvas-stage';
 
 type Props={bytes:Uint8Array|null;page:number;onPage:(page:number)=>void;error?:string};
@@ -125,26 +125,50 @@ export function LivePreview({bytes,page,onPage,error}:Props){
   </section>;
 }
 
-export function FullscreenPreview({bytes,onClose}:{bytes:Uint8Array|null;onClose:()=>void}){
+export function FullscreenPreview({
+  bytes,
+  onClose,
+  onDownloadPDF,
+  onDownloadXLSX,
+}:{
+  bytes: Uint8Array | null;
+  onClose: () => void;
+  onDownloadPDF?: () => void;
+  onDownloadXLSX?: () => void;
+}){
   const [page,setPage]=useState(0);
   const [zoom,setZoom]=useState(100);
   const [pan,setPan]=useState({x:0,y:0});
+  const [isDragging,setIsDragging]=useState(false);
   const drag=useRef({active:false,startX:0,startY:0,originX:0,originY:0});
   const {canvas,count,loading,error}=useRender(bytes,page,zoom);
 
   const resetPan=useCallback(()=>setPan({x:0,y:0}),[]);
   const selectPage=useCallback((next:number)=>{setPage(next);resetPan()},[resetPan]);
-  const zoomBy=(amount:number)=>{setZoom(value=>Math.min(240,Math.max(60,value+amount)));resetPan()};
+  const zoomBy=(amount:number)=>{setZoom(value=>Math.min(260,Math.max(40,value+amount)));resetPan()};
+
   const pointerDown=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(zoom<=100)return;
+    if(event.button!==0)return;
     drag.current={active:true,startX:event.clientX,startY:event.clientY,originX:pan.x,originY:pan.y};
+    setIsDragging(true);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const pointerMove=(event:React.PointerEvent<HTMLDivElement>)=>{
     if(!drag.current.active)return;
     setPan({x:drag.current.originX+event.clientX-drag.current.startX,y:drag.current.originY+event.clientY-drag.current.startY});
   };
-  const pointerUp=()=>{drag.current.active=false};
+  const pointerUp=()=>{
+    drag.current.active=false;
+    setIsDragging(false);
+  };
+
+  const handleWheel=(event:React.WheelEvent<HTMLDivElement>)=>{
+    if(event.ctrlKey||event.metaKey){
+      event.preventDefault();
+      const delta=event.deltaY<0?10:-10;
+      setZoom(value=>Math.min(260,Math.max(40,value+delta)));
+    }
+  };
 
   useEffect(()=>{
     const previous=document.activeElement as HTMLElement|null;
@@ -158,26 +182,87 @@ export function FullscreenPreview({bytes,onClose}:{bytes:Uint8Array|null;onClose
     return()=>{document.removeEventListener('keydown',handler);document.body.style.overflow='';previous?.focus()};
   },[count,onClose,page,selectPage]);
 
-  const canvasTransform='translate('+pan.x+'px,'+pan.y+'px)';
+  const canvasTransform='translate3d('+pan.x+'px,'+pan.y+'px,0)';
   const fallbackMessage=loading?'Rendering official form…':'Full preview unavailable.';
+
   return <div className="pds-modal" role="dialog" aria-modal="true" aria-label="Full PDS preview">
     <div className="pds-modal-bar">
-      <div><h3>Full preview · CS Form 212 Revised 2026</h3><span className="pds-modal-note"><Move size={12}/> Drag when zoomed</span></div>
+      <div>
+        <h3>Full preview · CS Form 212 Revised 2026</h3>
+        <span className="pds-modal-note"><Move size={12}/> Drag to pan · Ctrl+Scroll to zoom</span>
+      </div>
       <span className="spacer"/>
       <div className="pds-modal-tools">
-        <button aria-label="Zoom out" disabled={zoom<=60} onClick={()=>zoomBy(-20)}><ZoomOut size={16}/></button>
-        <span>{zoom}%</span>
-        <button aria-label="Zoom in" disabled={zoom>=240} onClick={()=>zoomBy(20)}><ZoomIn size={16}/></button>
-        <button aria-label="Reset zoom" onClick={()=>{setZoom(100);resetPan()}}><Maximize2 size={15}/></button>
-        <button aria-label="Close preview" onClick={onClose}><X size={17}/></button>
+        {onDownloadPDF&&(
+          <button
+            type="button"
+            className="pds-modal-action-btn primary"
+            onClick={onDownloadPDF}
+            title="Download completed official PDS PDF"
+            style={{
+              display:'inline-flex',
+              alignItems:'center',
+              gap:'6px',
+              background:'var(--accent,#00e5ff)',
+              color:'#000',
+              fontWeight:600,
+              fontSize:'12px',
+              padding:'6px 14px',
+              borderRadius:'7px',
+              border:'none',
+              cursor:'pointer',
+            }}
+          >
+            <Download size={14}/>
+            <span>Download PDF</span>
+          </button>
+        )}
+        {onDownloadXLSX&&(
+          <button
+            type="button"
+            className="pds-modal-action-btn"
+            onClick={onDownloadXLSX}
+            title="Download Excel spreadsheet (.xlsx)"
+            style={{
+              display:'inline-flex',
+              alignItems:'center',
+              gap:'6px',
+              background:'rgba(255,255,255,0.08)',
+              color:'var(--text,#fff)',
+              fontWeight:500,
+              fontSize:'12px',
+              padding:'6px 12px',
+              borderRadius:'7px',
+              border:'1px solid rgba(255,255,255,0.15)',
+              cursor:'pointer',
+            }}
+          >
+            <FileSpreadsheet size={14}/>
+            <span>Excel</span>
+          </button>
+        )}
+        <div style={{width:1,height:22,background:'rgba(255,255,255,0.12)',margin:'0 4px'}}/>
+        <button aria-label="Zoom out" disabled={zoom<=40} onClick={()=>zoomBy(-20)}><ZoomOut size={16}/></button>
+        <span style={{minWidth:44,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>{zoom}%</span>
+        <button aria-label="Zoom in" disabled={zoom>=260} onClick={()=>zoomBy(20)}><ZoomIn size={16}/></button>
+        <button aria-label="Reset zoom and pan" title="Reset view" onClick={()=>{setZoom(100);resetPan()}}><Maximize2 size={15}/></button>
+        <button aria-label="Close preview" title="Close preview (Esc)" onClick={onClose}><X size={17}/></button>
       </div>
     </div>
-    <div className={'pds-modal-stage'+(zoom>100?' is-zoomed':'')} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp}>
+    <div
+      className={'pds-modal-stage is-zoomed'}
+      style={{cursor:isDragging?'grabbing':'grab',touchAction:'none'}}
+      onPointerDown={pointerDown}
+      onPointerMove={pointerMove}
+      onPointerUp={pointerUp}
+      onPointerCancel={pointerUp}
+      onWheel={handleWheel}
+    >
       {bytes&&<canvas ref={canvas} aria-label={'PDS preview page '+(page+1)} style={{transform:canvasTransform,visibility:loading||error?'hidden':'visible'}}/>}
       {(loading||error||!bytes)&&<PreviewFallback message={fallbackMessage}/>}
     </div>
     <div className="pds-page-dots" aria-label="PDS pages">
-      {[0,1,2,3].map(index=><button key={index} className={'pds-dot'+(page===index?' active':'')} aria-label={'View page '+(index+1)} aria-pressed={page===index} onClick={()=>selectPage(index)}>{index+1}</button>)}
+      {[0,1,2,3].map(index=><button key={index} className={'pds-dot'+(page===index?' active':'')} aria-label={'View page '+(index+1)} aria-pressed={page===index} onClick={()=>selectPage(index)}>C{index+1}</button>)}
     </div>
     {error&&<p role="alert" className="error" style={{textAlign:'center'}}>{error}</p>}
   </div>;
