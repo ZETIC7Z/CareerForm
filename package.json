@@ -13,7 +13,8 @@
     "verify:form:accept": "node scripts/verify-pdf-lock.mjs --write",
     "check": "npm run typecheck && npm run verify:form",
     "verify:accounts": "tsx scripts/verify-account-flows.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "verify:live": "tsx scripts/verify-live.ts"
   },
   "dependencies": {
     "@designcodeio/threeui": "^1.2.0",
