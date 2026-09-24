@@ -1,5 +1,5 @@
 import type {Metadata} from 'next';
-import {Code2,Clapperboard,Camera,Users,Mail,Globe} from 'lucide-react';
+import {Clapperboard,Camera,Users,Mail,Globe} from 'lucide-react';
 import ContactForm from '@/components/contact-form';
 import {SITE} from '@/lib/site';
 
@@ -11,10 +11,9 @@ export const metadata:Metadata={
 const LINES=[
   {Icon:Mail,b:'Email',s:SITE.email,href:`mailto:${SITE.email}`},
   {Icon:Globe,b:'Portfolio',s:'www.zeticuz.xyz — projects, skills, collaborations',href:SITE.portfolio},
-  {Icon:Code2,b:'GitHub',s:'github.com/ZETIC7Z',href:SITE.socials[0].href},
-  {Icon:Users,b:'Facebook',s:'facebook.com/samxerz.pangilinan',href:SITE.socials[3].href},
-  {Icon:Clapperboard,b:'YouTube',s:'youtube.com/@ZETICUZ',href:SITE.socials[1].href},
-  {Icon:Camera,b:'Instagram',s:'instagram.com/zeticuz_',href:SITE.socials[2].href},
+  {Icon:Users,b:'Facebook',s:'facebook.com/samxerz.pangilinan',href:SITE.socials[2].href},
+  {Icon:Clapperboard,b:'YouTube',s:'youtube.com/@ZETICUZ',href:SITE.socials[0].href},
+  {Icon:Camera,b:'Instagram',s:'instagram.com/zeticuz_',href:SITE.socials[1].href},
 ];
 
 export default function Contact(){

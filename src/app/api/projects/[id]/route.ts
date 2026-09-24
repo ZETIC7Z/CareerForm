@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { getProjectsCollection } from '@/lib/db';
+import { getProjectsCollection, toPublicProject } from '@/lib/db';
 import { progress, validatedDraft } from '@/lib/model';
 
 // GET /api/projects/[id]
@@ -23,7 +23,8 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ ok: true, project });
+    // Never hand the raw document back: strip Mongo's _id and the owning userId.
+    return NextResponse.json({ ok: true, project: toPublicProject(project) });
   } catch (error) {
     console.error('Failed to get project:', error);
     return NextResponse.json({ error: 'Failed to fetch project' }, { status: 500 });
@@ -83,7 +84,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Project not found or unauthorized' }, { status: 404 });
     }
 
-    return NextResponse.json({ ok: true, project: result });
+    return NextResponse.json({ ok: true, project: toPublicProject(result) });
   } catch (error) {
     console.error('Failed to sync project:', error);
     return NextResponse.json({ error: 'Failed to sync project' }, { status: 500 });

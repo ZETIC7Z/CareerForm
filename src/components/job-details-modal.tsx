@@ -1,7 +1,8 @@
 'use client';
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {createPortal} from 'react-dom';
+import {notifyDevice, requestNotificationPermission} from '@/lib/drafts';
 import {
   X,
   Building2,
@@ -21,6 +22,10 @@ import {
   Copy,
   Check,
   Bell,
+  BellRing,
+  Bookmark,
+  BookmarkCheck,
+  Loader2,
   HelpCircle,
 } from 'lucide-react';
 import {GovernmentJob} from '@/lib/government-jobs';
@@ -32,15 +37,86 @@ type Props = {
   job: GovernmentJob | null;
   onClose: () => void;
   onOpenLetterStudio?: (job: GovernmentJob) => void;
+  isSaved?: boolean;
+  onToggleBookmark?: (job: GovernmentJob) => void;
 };
 
-export default function JobDetailsModal({job, onClose, onOpenLetterStudio}: Props) {
+type AlertState = 'idle' | 'pending' | 'active' | 'denied' | 'unsupported';
+
+export default function JobDetailsModal({
+  job,
+  onClose,
+  onOpenLetterStudio,
+  isSaved = false,
+  onToggleBookmark,
+}: Props) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const [alertSubscribed, setAlertSubscribed] = useState(false);
+  const [alertState, setAlertState] = useState<AlertState>('idle');
   const [showLetterStudio, setShowLetterStudio] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+
+  // Reflect the account's standing subscription and this device's notification permission,
+  // so the bell shows the truth instead of a state the user never actually granted.
+  useEffect(() => {
+    if (!job) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await fetch('/api/auth/me').then(r => r.json());
+        if (!me?.ok || !me.user) return;
+        if (!cancelled) setSignedIn(true);
+
+        const data = await fetch('/api/notifications').then(r => r.json());
+        const subscribed = Array.isArray(data?.alerts)
+          ? data.alerts.some((a: { agency: string }) => a.agency === job.agency)
+          : false;
+
+        if (cancelled) return;
+        if (subscribed) {
+          setAlertState(typeof Notification !== 'undefined' && Notification.permission === 'granted' ? 'active' : 'denied');
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [job]);
 
   if (!job) return null;
+
+  const handleEnableAlerts = async () => {
+    if (!signedIn) {
+      router.push('/?action=signin');
+      return;
+    }
+    setAlertState('pending');
+
+    const permission = await requestNotificationPermission();
+    if (permission === 'unsupported') {
+      setAlertState('unsupported');
+      return;
+    }
+    if (permission !== 'granted') {
+      setAlertState('denied');
+      return;
+    }
+
+    // Store the standing subscription so the alert survives this tab and this device,
+    // then fire one notification immediately as proof the device is wired up.
+    try {
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({agency: job.agency, agencyAcronym: job.agencyAcronym}),
+      });
+    } catch {}
+
+    notifyDevice(
+      `${job.agencyAcronym} job alerts are on`,
+      `We'll alert this device the moment ${job.agency} posts a new vacancy.`,
+      '/dashboard?tab=notifications'
+    );
+    setAlertState('active');
+  };
 
   const handleCopyLink = () => {
     if (typeof window !== 'undefined') {
@@ -68,9 +144,9 @@ export default function JobDetailsModal({job, onClose, onOpenLetterStudio}: Prop
   };
 
   return createPortal(
-    <div className="sig-modal-backdrop" onClick={onClose} style={{zIndex: 9999}}>
+    <div className="sig-modal-backdrop floating-backdrop-enter" onClick={onClose} style={{zIndex: 9999}}>
       <div
-        className="sig-modal-container job-details-modal"
+        className="sig-modal-container job-details-modal floating-modal-enter"
         style={{
           maxWidth: '780px',
           width: '95%',
@@ -105,11 +181,40 @@ export default function JobDetailsModal({job, onClose, onOpenLetterStudio}: Prop
           </button>
 
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', paddingRight: '40px'}}>
-            <div>
-              <h2 style={{fontSize: '24px', fontWeight: 800, margin: '0 0 6px', color: '#f8fafc'}}>
-                {job.title}
-              </h2>
-              <div style={{display: 'flex', alignItems: 'center', gap: '6px', color: '#06b6d4', fontSize: '14px', fontWeight: 600}}>
+            <div style={{minWidth: 0}}>
+              <div style={{display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap'}}>
+                <h2 style={{fontSize: '24px', fontWeight: 800, margin: 0, color: '#f8fafc'}}>
+                  {job.title}
+                </h2>
+
+                {/* Bookmark slot beside the position title — stars the job onto the
+                    dashboard's Bookmarks tab for the signed-in account. */}
+                <button
+                  type="button"
+                  onClick={() => onToggleBookmark?.(job)}
+                  aria-pressed={isSaved}
+                  aria-label={isSaved ? 'Remove bookmark' : 'Save job to bookmarks'}
+                  title={isSaved ? 'Saved to your dashboard bookmarks' : 'Save this job to your dashboard bookmarks'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: isSaved ? 'rgba(6, 182, 212, 0.16)' : 'transparent',
+                    border: `1px solid ${isSaved ? 'rgba(6, 182, 212, 0.55)' : '#334155'}`,
+                    color: isSaved ? '#06b6d4' : '#94a3b8',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isSaved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+                  {isSaved ? 'Saved' : 'Save job'}
+                </button>
+              </div>
+
+              <div style={{display: 'flex', alignItems: 'center', gap: '6px', color: '#06b6d4', fontSize: '14px', fontWeight: 600, marginTop: '6px'}}>
                 <Building2 size={16} />
                 <span>{job.agency} ({job.agencyAcronym})</span>
               </div>
@@ -117,7 +222,15 @@ export default function JobDetailsModal({job, onClose, onOpenLetterStudio}: Prop
 
             <button
               type="button"
-              onClick={() => setAlertSubscribed(!alertSubscribed)}
+              onClick={handleEnableAlerts}
+              disabled={alertState === 'pending'}
+              title={
+                alertState === 'active'
+                  ? `This device will be notified when ${job.agency} posts a new vacancy`
+                  : alertState === 'denied'
+                  ? 'Notifications are blocked in your browser settings — allow them for this site to receive job alerts'
+                  : 'Get a device notification when this agency posts a new job'
+              }
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -126,13 +239,31 @@ export default function JobDetailsModal({job, onClose, onOpenLetterStudio}: Prop
                 borderRadius: '8px',
                 fontSize: '12px',
                 fontWeight: 600,
-                background: alertSubscribed ? 'rgba(16, 185, 129, 0.15)' : '#0f172a',
-                border: alertSubscribed ? '1px solid #10b981' : '1px solid #334155',
-                color: alertSubscribed ? '#10b981' : '#f8fafc',
-                cursor: 'pointer',
+                background: alertState === 'active' ? 'rgba(16, 185, 129, 0.15)' : alertState === 'denied' ? 'rgba(239, 68, 68, 0.12)' : '#0f172a',
+                border:
+                  alertState === 'active'
+                    ? '1px solid #10b981'
+                    : alertState === 'denied'
+                    ? '1px solid rgba(239, 68, 68, 0.5)'
+                    : '1px solid #334155',
+                color: alertState === 'active' ? '#10b981' : alertState === 'denied' ? '#f87171' : '#f8fafc',
+                cursor: alertState === 'pending' ? 'progress' : 'pointer',
               }}
             >
-              <Bell size={13} /> {alertSubscribed ? 'Alerts Active' : `Get ${job.agencyAcronym} Job Alerts`}
+              {alertState === 'pending' ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : alertState === 'active' ? (
+                <BellRing size={13} />
+              ) : (
+                <Bell size={13} />
+              )}
+              {alertState === 'active'
+                ? 'Alerts On'
+                : alertState === 'denied'
+                ? 'Notifications Blocked'
+                : alertState === 'unsupported'
+                ? 'Not Supported'
+                : `Get ${job.agencyAcronym} Job Alerts`}
             </button>
           </div>
 
@@ -150,6 +281,17 @@ export default function JobDetailsModal({job, onClose, onOpenLetterStudio}: Prop
               <Users size={14} /> {job.vacancies} Vacancy
             </span>
           </div>
+
+          {alertState === 'active' && (
+            <p style={{margin: '10px 0 0', fontSize: '11.5px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px'}}>
+              <BellRing size={12} /> Device alerts active — we will notify you when {job.agency} posts a new vacancy.
+            </p>
+          )}
+          {alertState === 'denied' && (
+            <p style={{margin: '10px 0 0', fontSize: '11.5px', color: '#f87171', display: 'flex', alignItems: 'center', gap: '6px'}}>
+              <Bell size={12} /> Your browser is blocking notifications for this site. Enable them in the padlock menu next to the address bar, then tap the bell again.
+            </p>
+          )}
         </div>
 
         {/* Modal Body: Scrollable Job Content Boxes */}

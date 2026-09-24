@@ -258,6 +258,25 @@ export function formatFullDate(value:string):string{
   }
   return trimmed;
 }
+/**
+ * The printed educational background table has five fixed rows — Elementary, Secondary,
+ * Vocational / Trade Course, College, Graduate Studies — so a record only reads correctly
+ * when it sits on the row its own level names. Imported sheets rarely list them in that
+ * order, so the rows are ranked by level before they are drawn. A record whose level is not
+ * one of the five is left exactly where the user put it, which also keeps a hand-arranged
+ * set of rows untouched.
+ */
+export function sortEducationRecords(records: Row[]): Row[] {
+  if (!records || records.length <= 1) return records || [];
+  const rank = (row: Row) => {
+    const level = (row.level || '').trim().toLowerCase();
+    return educationLevels.findIndex((candidate) => candidate.toLowerCase() === level);
+  };
+  const occupied = records.filter((row) => Object.entries(row).some(([key, value]) => key !== 'level' && (value || '').trim()));
+  if (occupied.some((row) => rank(row) === -1)) return [...records];
+  return [...records].sort((a, b) => rank(a) - rank(b));
+}
+
 export function sortWorkRecordsDescending(records: Row[]): Row[] {
   if (!records || records.length <= 1) return records || [];
   return [...records].sort((a, b) => {

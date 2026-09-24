@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import schema from './schema.json';
 import {PDS,getValue,displayDate,questions} from './model';
+import {TEMPLATE_REVISION} from './site';
 
 const PAGE_SHEETS=['C1','C2','C3','C4'];
 
@@ -20,7 +21,7 @@ export async function generateXLSX(data:PDS,templateBuffer?:ArrayBuffer):Promise
   } else {
     // In browser, safely fetch binary stream from API route with static fallback
     let buf:ArrayBuffer|undefined;
-    for(const url of ['/api/template-xlsx','/csc-2026.xlsx']){
+    for(const url of [`/api/template-xlsx?v=${TEMPLATE_REVISION}`,`/csc-2026.xlsx?v=${TEMPLATE_REVISION}`]){
       try{
         const res=await fetch(url);
         if(res.ok){buf=await res.arrayBuffer();break}

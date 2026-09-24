@@ -12,7 +12,18 @@ export const metadata:Metadata={
   authors:[{name:'Sam Pangilinan',url:'https://www.zeticuz.xyz'}],
   creator:'Sam Pangilinan (ZETICUZ)',
   openGraph:{title:'CareerForm PH — Free CSC PDS Builder (Revised 2026)',description:'Fill the official 2026 Personal Data Sheet with a live preview. Free, private, entirely in your browser.',type:'website',locale:'en_PH',siteName:'CareerForm PH'},
-  icons:{icon:'/careerform-icon.png',apple:'/careerform-icon.png'},
+  // Browser-tab icon. The .ico is first because Chrome, Edge and the Windows shell look
+  // for /favicon.ico before anything else — it is generated from the same mark by
+  // `node scripts/make-favicon.mjs`, so every path shows the CareerForm logo and never
+  // the framework's default artwork. The PNG covers browsers that prefer it, and the
+  // 180px square is what iOS puts on a home screen.
+  icons:{
+    icon:[
+      {url:'/favicon.ico',sizes:'any'},
+      {url:'/icon.png',type:'image/png',sizes:'568x508'},
+    ],
+    apple:[{url:'/apple-icon.png',type:'image/png',sizes:'180x180'}],
+  },
 };
 export const viewport: Viewport = {
   width: 'device-width',

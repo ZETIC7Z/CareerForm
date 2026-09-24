@@ -4,12 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run verify:form",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "verify:form": "node scripts/verify-pdf-lock.mjs",
+    "verify:form:accept": "node scripts/verify-pdf-lock.mjs --write",
+    "check": "npm run typecheck && npm run verify:form",
+    "verify:accounts": "tsx scripts/verify-account-flows.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@designcodeio/threeui": "^1.2.0",
     "@fontsource-variable/manrope": "^5.3.0",
     "@fontsource-variable/newsreader": "^5.3.0",
     "@imgly/background-removal": "^1.7.0",
@@ -27,7 +34,8 @@
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "read-excel-file": "^9.3.10"
+    "read-excel-file": "^9.3.10",
+    "three": "^0.186.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -37,6 +45,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",

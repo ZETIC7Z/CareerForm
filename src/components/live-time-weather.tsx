@@ -52,19 +52,51 @@ export default function LiveTimeWeather({
   // Auto-fetch location & weather without any browser permission prompt
   useEffect(() => {
     let cancelled = false;
+
+    // Load cached location if available
+    try {
+      const cached = localStorage.getItem('careerform_user_weather');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.city) setWeather(parsed);
+      }
+    } catch {}
+
     const fetchWeather = async () => {
       try {
-        const res = await fetch('/api/weather');
+        let queryParams = '';
+        // Fast client-side IP check
+        try {
+          const ipRes = await fetch('http://ip-api.com/json/', { signal: AbortSignal.timeout(1800) });
+          if (ipRes.ok) {
+            const ipData = await ipRes.json();
+            if (ipData?.status === 'success' && ipData?.lat && ipData?.lon) {
+              const cName = ipData.city || '';
+              const rName = ipData.regionName || '';
+              const isCebu = cName === 'Lahug' || cName.toLowerCase().includes('cebu') || rName.toLowerCase().includes('cebu') || ipData.zip === '6000';
+              const cityResolved = isCebu ? 'Cebu' : cName;
+              queryParams = `?city=${encodeURIComponent(cityResolved)}&lat=${ipData.lat}&lon=${ipData.lon}`;
+            }
+          }
+        } catch {
+          // Continue to standard /api/weather
+        }
+
+        const res = await fetch(`/api/weather${queryParams}`);
         if (res.ok && !cancelled) {
           const data = await res.json();
           if (data?.ok) {
-            setWeather({
+            const weatherPayload = {
               city: data.city,
               region: data.region,
               temperature: data.temperature,
               condition: data.condition,
               icon: data.icon,
-            });
+            };
+            setWeather(weatherPayload);
+            try {
+              localStorage.setItem('careerform_user_weather', JSON.stringify(weatherPayload));
+            } catch {}
           }
         }
       } catch (err) {

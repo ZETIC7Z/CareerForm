@@ -31,14 +31,14 @@ export default function CoverLetterSelectionModal({open, onClose}: Props) {
 
   return (
     <div
-      className="modal-backdrop nd-backdrop"
+      className="modal-backdrop nd-backdrop floating-backdrop-enter"
       style={{zIndex: 9999}}
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="nd-modal"
+        className="nd-modal floating-modal-enter"
         role="dialog"
         aria-modal="true"
         aria-labelledby="letter-choice-title"
@@ -67,7 +67,7 @@ export default function CoverLetterSelectionModal({open, onClose}: Props) {
         <div className="nd-cards grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             type="button"
-            className="nd-card group text-left transition-all duration-300 hover:border-amber-400/50 hover:shadow-lg"
+            className="nd-card modal-stagger-1 group text-left transition-all duration-300 hover:border-amber-400/50 hover:shadow-lg"
             onClick={() => handleSelect('application')}
           >
             <span className="nd-card-top">
@@ -89,7 +89,7 @@ export default function CoverLetterSelectionModal({open, onClose}: Props) {
 
           <button
             type="button"
-            className="nd-card group text-left transition-all duration-300 hover:border-sky-400/50 hover:shadow-lg"
+            className="nd-card modal-stagger-2 group text-left transition-all duration-300 hover:border-sky-400/50 hover:shadow-lg"
             onClick={() => handleSelect('transmittal')}
           >
             <span className="nd-card-top">

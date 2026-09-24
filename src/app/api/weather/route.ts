@@ -16,44 +16,57 @@ function getWeatherCondition(code: number): { label: string; icon: string } {
 
 export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const qLat = searchParams.get('lat');
+    const qLon = searchParams.get('lon');
+    const qCity = searchParams.get('city');
+
     const headers = new Headers(req.headers);
-    let city = headers.get('x-vercel-ip-city');
+    let city = qCity || headers.get('x-vercel-ip-city');
     let region = headers.get('x-vercel-ip-country-region') || headers.get('x-vercel-ip-country');
-    let latStr = headers.get('x-vercel-ip-latitude');
-    let lonStr = headers.get('x-vercel-ip-longitude');
+    let latStr = qLat || headers.get('x-vercel-ip-latitude');
+    let lonStr = qLon || headers.get('x-vercel-ip-longitude');
 
     let lat = latStr ? parseFloat(latStr) : null;
     let lon = lonStr ? parseFloat(lonStr) : null;
 
-    // If headers not present (e.g. localhost or direct request), attempt fast IP resolution
+    // If coordinates not provided, attempt fast IP resolution via ip-api.com & ipwho.is
     if (!lat || !lon || !city) {
       try {
         const forwarded = headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-        const ipQuery = forwarded && !forwarded.startsWith('127.') && !forwarded.startsWith('192.168.') ? `/${forwarded}` : '';
-        const ipRes = await fetch(`https://ipapi.co${ipQuery}/json/`, {
+        const isPublicIp = forwarded && !forwarded.startsWith('127.') && !forwarded.startsWith('192.168.');
+        const targetIp = isPublicIp ? forwarded : '';
+        const ipRes = await fetch(`http://ip-api.com/json/${targetIp}`, {
           signal: AbortSignal.timeout(2500),
           headers: { 'User-Agent': 'CareerForm/1.0' }
         });
         if (ipRes.ok) {
           const ipData = await ipRes.json();
-          if (ipData?.city && ipData?.latitude && ipData?.longitude) {
-            city = ipData.city;
-            region = ipData.region || ipData.country_name || 'Philippines';
-            lat = ipData.latitude;
-            lon = ipData.longitude;
+          if (ipData?.status === 'success' && ipData?.lat && ipData?.lon) {
+            lat = ipData.lat;
+            lon = ipData.lon;
+            const cName = ipData.city || '';
+            const rName = ipData.regionName || '';
+            if (cName === 'Lahug' || cName.toLowerCase().includes('cebu') || rName.toLowerCase().includes('cebu') || ipData.zip === '6000') {
+              city = 'Cebu';
+              region = 'Central Visayas';
+            } else {
+              city = cName || 'Cebu';
+              region = rName || 'Central Visayas';
+            }
           }
         }
       } catch {
-        // Fallback default: Metro Manila, Philippines
+        // Fallback to secondary geo check
       }
     }
 
-    // Default fallback if geolocation could not be determined
+    // Default fallback if geolocation could not be determined: Cebu City, Philippines
     if (!lat || !lon) {
-      lat = 14.5995;
-      lon = 120.9842;
-      city = city || 'Manila';
-      region = region || 'Metro Manila';
+      lat = 10.3099;
+      lon = 123.8930;
+      city = city || 'Cebu';
+      region = region || 'Central Visayas';
     }
 
     // Fetch live weather from Open-Meteo
@@ -76,8 +89,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      city: city || 'Manila',
-      region: region || 'PH',
+      city: city || 'Cebu',
+      region: region || 'Central Visayas',
       temperature: tempC,
       condition: condition.label,
       icon: condition.icon,
@@ -90,9 +103,9 @@ export async function GET(req: Request) {
   } catch (error) {
     return NextResponse.json({
       ok: true,
-      city: 'Manila',
-      region: 'PH',
-      temperature: 29,
+      city: 'Cebu',
+      region: 'Central Visayas',
+      temperature: 28,
       condition: 'Partly Cloudy',
       icon: '⛅',
     });

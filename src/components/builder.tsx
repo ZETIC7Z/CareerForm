@@ -3,7 +3,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import {FileSpreadsheet,Upload,Download,Mail,Maximize2,Check,Save,Trash2,ArrowLeft,ChevronDown,Settings2,FilePlus2,Printer,BookOpen,FileText,PenLine,Cloud,CloudCheck,WifiOff,LayoutDashboard,AlertCircle} from 'lucide-react';
+import {FileSpreadsheet,Upload,Download,Mail,Maximize2,Check,Save,Trash2,ArrowLeft,ChevronDown,Settings2,FilePlus2,Printer,BookOpen,FileText,PenLine,Cloud,CloudCheck,WifiOff,LayoutDashboard,AlertCircle,Plus,X} from 'lucide-react';
 import {useRef} from 'react';
 import ThemeToggle from './theme-toggle';
 import ThemeAccentPicker from './theme-accent-picker';
@@ -16,6 +16,7 @@ import CoverLetterSelectionModal from './cover-letter-selection-modal';
 import NewDocumentModal from './new-document-modal';
 import CSCGuideModal from './csc-guide-modal';
 import {LivePreview,FullscreenPreview} from './pdf-preview';
+import BrandMark from './brand-logo';
 import {generatePDF} from '@/lib/pdf';
 import {generateXLSX} from '@/lib/xlsx';
 import {PDS,emptyPDS,validatedDraft,progress,download,issues,getReviewIssues,ReviewIssue} from '@/lib/model';
@@ -76,6 +77,15 @@ export default function Builder(){
   const [syncStatus,setSyncStatus]=useState<'synced'|'saving'|'offline'|'local'>('local');
   const [groupIndex,setGroupIndex]=useState(0);
   const [stepIndex,setStepIndex]=useState(0);
+
+  // Signed-in continuity: the builder and the dashboard share one set of projects.
+  // Opening /builder without a project id now offers the account's recent documents
+  // (or asks for a Project Name first, so the new one lands on the dashboard too).
+  const [pickerOpen,setPickerOpen]=useState(false);
+  const [accountProjects,setAccountProjects]=useState<{id:string;title:string;completionRate:number;lastModified:string}[]>([]);
+  const [newNameOpen,setNewNameOpen]=useState(false);
+  const [newName,setNewName]=useState('');
+  const [creatingProject,setCreatingProject]=useState(false);
 
   const handleJump=(targetGroup:number,targetStep=0)=>{
     if(finished)setFinished(false);
@@ -144,6 +154,51 @@ export default function Builder(){
     void init();
     return () => { cancelled = true; };
   }, []);
+
+  // Authenticated entry point: surface the dashboard's projects in the builder.
+  useEffect(()=>{
+    if(!ready||projectId)return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        const me=await fetch('/api/auth/me').then(r=>r.json());
+        if(!me?.ok||!me.user||cancelled)return;
+        const json=await fetch('/api/projects').then(r=>r.json());
+        if(cancelled)return;
+        const list=(json?.projects||[]).map((p:{id:string;title:string;completionRate?:number;lastModified:string})=>({
+          id:p.id,
+          title:p.title,
+          completionRate:p.completionRate??0,
+          lastModified:p.lastModified,
+        }));
+        setAccountProjects(list);
+        // Suppress the anonymous "new document" dialog: an account holder gets the
+        // recent-projects picker instead, so the two modals never stack.
+        setCreateOpen(false);
+        setPickerOpen(true);
+      }catch{}
+    })();
+    return()=>{cancelled=true};
+  },[ready,projectId]);
+
+  const createNamedProject=async()=>{
+    if(!newName.trim())return;
+    setCreatingProject(true);
+    try{
+      const res=await fetch('/api/projects',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({title:newName.trim(),data,kind:'pds'}),
+      });
+      const json=await res.json();
+      if(json?.ok&&json.project){
+        // Hard navigation so the workspace loads in project mode with a stable URL.
+        window.location.href=`/builder?project=${json.project.id}`;
+        return;
+      }
+    }catch{}
+    setCreatingProject(false);
+  };
 
   // Offline-first local backup + debounced MongoDB Atlas auto-sync
   useEffect(()=>{
@@ -343,12 +398,7 @@ export default function Builder(){
       <div className="wc-left">
         <Link className="wc-back" href={projectId ? "/dashboard" : "/"} aria-label={projectId ? "Back to dashboard" : "Back to home"} title={projectId ? "Back to dashboard" : "Back to home"}><ArrowLeft size={17}/></Link>
         <Link className="wc-brand" href="/" aria-label="CareerForm PH home">
-          <span className="font-bold tracking-tight text-[var(--heading)] text-sm sm:text-base flex items-center gap-1.5 select-none">
-            CareerForm
-            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]">
-              2026
-            </span>
-          </span>
+          <BrandMark height={34}/>
         </Link>
         {projectTitle && (
           <span className="wc-project-chip hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-white/5 border border-white/10 text-white max-w-[180px] truncate" title={projectTitle}>
@@ -519,6 +569,66 @@ export default function Builder(){
     </div>
 
     {createOpen&&<NewDocumentModal open onClose={()=>setCreateOpen(false)} onCreatePDS={()=>setCreateOpen(false)} onCreateLetter={()=>{setCreateOpen(false);setLetterModalOpen(true)}} onImport={()=>setImportOpen(true)}/>}
+
+    {/* Continue from the dashboard, or name a brand-new project so it appears there. */}
+    {pickerOpen&&<div className="modal-backdrop nd-backdrop" onClick={e=>{if(e.target===e.currentTarget)setPickerOpen(false)}}>
+      <div className="nd-modal" role="dialog" aria-modal="true" aria-labelledby="builder-projects-title">
+        <div className="nd-head">
+          <div>
+            <p className="nd-kicker">Your account</p>
+            <h2 id="builder-projects-title">Continue a project</h2>
+            <p className="nd-sub">{accountProjects.length>0?'Pick up any document from your dashboard, or start a new one.':'Nothing saved yet — name your first project and it will appear on your dashboard.'}</p>
+          </div>
+          <button type="button" className="text-button" aria-label="Close" onClick={()=>setPickerOpen(false)}><X size={18}/></button>
+        </div>
+
+        {accountProjects.length>0&&<div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:280,overflowY:'auto',marginBottom:16}}>
+          {accountProjects.slice(0,12).map(p=><button
+            key={p.id}
+            type="button"
+            onClick={()=>{window.location.href=`/builder?project=${p.id}`}}
+            style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:12,border:'1px solid var(--line-strong)',background:'var(--panel-2)',color:'var(--heading)',cursor:'pointer',textAlign:'left'}}
+          >
+            <FileText size={16} style={{color:'var(--accent,#06b6d4)',flexShrink:0}}/>
+            <span style={{flex:1,minWidth:0}}>
+              <strong style={{display:'block',fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.title}</strong>
+              <span style={{display:'block',fontSize:11.5,color:'var(--muted)'}}>{p.completionRate}% complete</span>
+            </span>
+            <span style={{fontSize:12,fontWeight:700,color:'var(--accent,#06b6d4)'}}>Open</span>
+          </button>)}
+        </div>}
+
+        <button type="button" className="btn btn-primary" style={{width:'100%'}} onClick={()=>{setPickerOpen(false);setNewName('');setNewNameOpen(true)}}>
+          <Plus size={16}/> Start a new project
+        </button>
+      </div>
+    </div>}
+
+    {newNameOpen&&<div className="modal-backdrop nd-backdrop" onClick={e=>{if(e.target===e.currentTarget)setNewNameOpen(false)}}>
+      <div className="nd-modal" role="dialog" aria-modal="true" aria-labelledby="builder-name-title" style={{maxWidth:440}}>
+        <div className="nd-head">
+          <div>
+            <p className="nd-kicker">New project</p>
+            <h2 id="builder-name-title">Name your project</h2>
+            <p className="nd-sub">This name is what you will see on your dashboard, so make it recognisable.</p>
+          </div>
+          <button type="button" className="text-button" aria-label="Close" onClick={()=>setNewNameOpen(false)}><X size={18}/></button>
+        </div>
+        <label className="field-label" style={{display:'block',marginBottom:14}}>Project Name
+          <input
+            autoFocus
+            value={newName}
+            onChange={e=>setNewName(e.target.value)}
+            onKeyDown={e=>{if(e.key==='Enter')void createNamedProject()}}
+            placeholder="e.g. DSWD Social Welfare Officer II PDS"
+            style={{width:'100%',marginTop:6,padding:'10px 12px',borderRadius:10,border:'1px solid var(--line-strong)',background:'var(--input)',color:'var(--heading)',fontSize:13.5,outline:'none'}}
+          />
+        </label>
+        <button type="button" className="btn btn-primary" style={{width:'100%'}} disabled={creatingProject||!newName.trim()} onClick={()=>void createNamedProject()}>
+          {creatingProject?'Creating…':'Create project & open'}
+        </button>
+      </div>
+    </div>}
     {guideOpen&&<CSCGuideModal open onClose={()=>setGuideOpen(false)}/>}
     {importOpen&&<ImportDialog onClose={()=>setImportOpen(false)} onApply={applyImport}/>}
     {letterOpen&&<LetterDialog data={data} onClose={()=>setLetterOpen(false)}/>}

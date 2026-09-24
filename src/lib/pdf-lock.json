@@ -1,0 +1,13 @@
+{
+  "note": "Frozen live-form contract. Regenerate with: node scripts/verify-pdf-lock.mjs --write",
+  "frozenAt": "2026-09-24T12:38:09.537Z",
+  "files": {
+    "src/lib/pdf.ts": "16638887fe2c36eb902752fc533f90cfd14190021e98434c0dce5a63c306018a",
+    "src/lib/pdf-calibration.json": "9f56ec4921e957feb1435ee63d5562f11622a75e30d4c9ee8579093bdccdade1",
+    "src/lib/pdf-map.json": "e6f529f5dd96582be7adfdb8cdd9c5ecd4eab158443d603716c88a6150ec0a82",
+    "src/lib/schema.json": "7f7a88e5486d2cb59f64f942b46058614a1f2e958323f4f9ae0aef8541cff0a2",
+    "src/lib/model.ts": "7ad8227fc38e070a4552d4f1822aafcc1b45436fc78106d04bccb607a8cd576f",
+    "public/csc-2026.pdf": "513869e412d672f961d3a73351beaf07d029c3c8e594f50a7f9e9032503b10c3",
+    "public/csc-2026.xlsx": "2cafc6d54ad4a2fc950f81ddb3fa422f4c58ef6d9dcb4ef95b61e465935868ea"
+  }
+}

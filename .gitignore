@@ -13,3 +13,7 @@ test-results/
 
 .vercel
 .env*
+
+scripts/__pycache__/
+__pycache__/
+.next-verify/

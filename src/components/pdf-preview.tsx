@@ -85,7 +85,9 @@ function useRender(bytes:Uint8Array|null,page:number,zoom:number):RenderState{
 
 function PreviewFallback({message}:{message?:string}){
   return <div className="preview-fallback">
-    <Image src="/template-preview.png" alt="Official CS Form 212 Revised 2026 preview" width={612} height={792}/>
+    {/* Fallback is a render of the same official A4 origin (620x877 = 210x297mm), so the
+        sheet keeps page 1's exact shape even before pdf.js paints the live canvas. */}
+    <Image src="/template-preview.png" alt="Official CS Form 212 Revised 2026 preview" width={620} height={877} priority/>
     <p>{message||'Preparing the live official-form mirror…'}</p>
   </div>;
 }
@@ -126,7 +128,7 @@ export function LivePreview({bytes,page,onPage,error,onExpand}:Props){
       </div>
     </CanvasStage>
     {visibleError&&<p role="status" className="preview-warning">{visibleError}</p>}
-    <div className="preview-footer">CS Form No. 212 · Revised 2026 <span>8 × 14 in · Print at 100%</span></div>
+    <div className="preview-footer">CS Form No. 212 · Revised 2026 <span>A4 · 210 × 297 mm · Print at 100%</span></div>
   </section>;
 }
 
@@ -263,7 +265,10 @@ export function FullscreenPreview({
       onPointerCancel={pointerUp}
       onWheel={handleWheel}
     >
-      {bytes&&<canvas ref={canvas} aria-label={'PDS preview page '+(page+1)} style={{transform:canvasTransform,visibility:loading||error?'hidden':'visible'}}/>}
+      {/* display:none (not visibility:hidden) until the first frame exists: a canvas with no
+          render is still a 300x150 box, and as a flex child it would stretch the stage and
+          shove the A4 fallback off to the side. Hidden here, the fallback owns the layout. */}
+      {bytes&&<canvas ref={canvas} aria-label={'PDS preview page '+(page+1)} style={{transform:canvasTransform,display:loading||error?'none':'block'}}/>}
       {(loading||error||!bytes)&&<PreviewFallback message={fallbackMessage}/>}
     </div>
     <div className="pds-page-dots" aria-label="PDS pages">

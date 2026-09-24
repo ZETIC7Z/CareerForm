@@ -23,6 +23,7 @@ import {
   ChevronDown,
   LayoutDashboard,
 } from 'lucide-react';
+import BrandMark from '@/components/brand-logo';
 import CanvasStage from '@/components/canvas-stage';
 import ThemeAccentPicker from '@/components/theme-accent-picker';
 import ThemeToggle from '@/components/theme-toggle';
@@ -297,12 +298,7 @@ ${senderContact}`;
             <ArrowLeft size={17} />
           </Link>
           <Link className="wc-brand" href="/" aria-label="CareerForm PH home">
-            <span className="font-bold tracking-tight text-[var(--heading)] text-sm sm:text-base flex items-center gap-1.5 select-none">
-              CareerForm
-              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]">
-                2026
-              </span>
-            </span>
+            <BrandMark height={34}/>
           </Link>
 
           {/* Letter Type Switcher */}

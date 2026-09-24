@@ -10,6 +10,7 @@ import ToolsSelectorModal from './tools-selector-modal';
 import ThemeToggle from './theme-toggle';
 import ThemeAccentPicker from './theme-accent-picker';
 import LiveTimeWeather from './live-time-weather';
+import BrandMark from './brand-logo';
 
 const navLinks = [
   { name: 'Home', href: '/' },
@@ -27,6 +28,7 @@ export default function GlassNavigation() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [user, setUser] = useState<UserSession | null>(null);
+  const [authNotice, setAuthNotice] = useState('');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -38,7 +40,7 @@ export default function GlassNavigation() {
 
   // Fetch session on load
   useEffect(() => {
-    fetch('/api/auth/me')
+    fetch('/api/auth/me', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data.ok && data.user) {
@@ -48,9 +50,49 @@ export default function GlassNavigation() {
       .catch(() => {});
   }, []);
 
+  /**
+   * Open the right dialog for whatever the URL asks for.
+   *
+   * `?action=signin` is what every guarded page redirects with, and `?authError=<code>` is
+   * how the Google callback reports a cancellation or a mismatch. Both used to land here
+   * and be silently ignored, which left people staring at the home page with no idea what
+   * happened. The query is stripped straight afterwards so a refresh does not replay it.
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    const authError = params.get('authError');
+    if (!action && !authError) return;
+
+    setAuthMode(action === 'signup' ? 'signup' : 'signin');
+    setAuthNotice(authError || '');
+    setAuthOpen(true);
+
+    params.delete('action');
+    params.delete('authError');
+    const rest = params.toString();
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`
+    );
+  }, []);
+
+  /**
+   * Sign out, then leave the dashboard entirely.
+   *
+   * The cookie is cleared server-side first; only then does the browser do a full
+   * navigation home, so no dashboard markup survives in memory and nothing can render a
+   * signed-in shell for a signed-out visitor.
+   */
   const handleSignOut = async () => {
-    await fetch('/api/auth/signout', { method: 'POST' });
-    setUser(null);
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' });
+    } finally {
+      setUser(null);
+      setIsMobileMenuOpen(false);
+      if (typeof window !== 'undefined') window.location.assign('/');
+    }
   };
 
   const openAuth = (mode: 'signin' | 'signup') => {
@@ -63,11 +105,10 @@ export default function GlassNavigation() {
 
   return (
     <>
-      <header
-        className={`fixed z-50 transition-all duration-500 ${
-          isScrolled ? 'top-1 left-3 right-3 md:top-2 md:left-6 md:right-6' : 'top-0 left-0 right-0'
-        }`}
-      >
+      {/* The bar is pinned to the very top at a constant height and constant width. Only
+          the glass tint changes as you scroll, so the logo never slides or resizes and
+          never reappears anywhere else on the page — it is simply locked at the top. */}
+      <header className="fixed z-50 top-0 left-0 right-0 transition-all duration-500">
         {/* Realtime Clock & Auto-detected Weather (Site Center Top) */}
         <div className="w-full flex justify-center pt-2 pb-1 pointer-events-none">
           <div className="pointer-events-auto">
@@ -76,34 +117,28 @@ export default function GlassNavigation() {
         </div>
 
         <nav
-          className={`mx-auto transition-all duration-500 ${
-            isScrolled || isMobileMenuOpen
-              ? 'glass-nav-scrolled max-w-[1240px]'
-              : 'glass-nav-transparent max-w-[1440px]'
+          className={`mx-auto max-w-[1440px] transition-all duration-500 ${
+            isScrolled || isMobileMenuOpen ? 'glass-nav-scrolled' : 'glass-nav-transparent'
           }`}
         >
-          <div
-            className={`flex items-center justify-between transition-all duration-500 px-4 sm:px-6 lg:px-8 ${
-              isScrolled ? 'h-14' : 'h-18 md:h-20'
-            }`}
-          >
-            {/* Clean Minimalist Typography Brand (Logo removed for now per request) */}
-            <Link href="/" className="flex items-center gap-2 group">
-              <span className="text-lg font-bold tracking-tight text-[var(--heading)] flex items-center gap-2 select-none">
-                CareerForm
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent)]">
-                  2026
-                </span>
-              </span>
+          <div className="flex items-center justify-between gap-5 md:gap-6 h-18 md:h-20 px-4 sm:px-6 lg:px-8">
+            {/* The CareerForm mark — the artwork carries the wordmark, so the header no
+                longer spells the name out in type beside it. The height is deliberately
+                constant: the bar may tighten on scroll, but the logo itself stays locked
+                at the same size and the same place rather than animating under the
+                reader's eyes. */}
+            <Link href="/" className="flex items-center group shrink-0" aria-label="CareerForm PH home">
+              <BrandMark height={40} priority />
             </Link>
 
-            {/* Desktop Navigation Links */}
-            <div className="hidden md:flex items-center gap-6 lg:gap-8">
+            {/* Desktop Navigation Links — never break a label across two lines, and the
+                spacing tightens before the row would ever squeeze the marks together. */}
+            <div className="hidden md:flex items-center gap-3 lg:gap-4 xl:gap-7">
               {dynamicNavLinks.map(link => (
                 <Link
                   key={link.name}
                   href={link.href}
-                  className="glass-nav-link text-sm relative group font-medium"
+                  className="glass-nav-link text-sm relative group font-medium whitespace-nowrap"
                 >
                   {link.name}
                   <span className="glass-nav-indicator" />
@@ -112,7 +147,7 @@ export default function GlassNavigation() {
 
               <button
                 type="button"
-                className="glass-nav-link text-sm flex items-center gap-1.5 font-medium cursor-pointer"
+                className="glass-nav-link text-sm flex items-center gap-1.5 font-medium cursor-pointer whitespace-nowrap"
                 onClick={() => setGuideOpen(true)}
               >
                 <BookOpen size={14} /> CSC Guide
@@ -120,8 +155,12 @@ export default function GlassNavigation() {
             </div>
 
             {/* Desktop CTAs, Theme Picker & Auth */}
-            <div className="hidden md:flex items-center gap-3">
-              <ThemeAccentPicker />
+            <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
+              {/* The accent picker is a preference, not navigation — below xl it moves into
+                  the mobile menu so a wide logo and the account controls always fit. */}
+              <span className="hidden xl:inline-flex">
+                <ThemeAccentPicker />
+              </span>
               <ThemeToggle />
 
               {user ? (
@@ -135,7 +174,9 @@ export default function GlassNavigation() {
                   </Link>
                   <span className="user-profile-chip" title={user.email}>
                     <UserCheck size={14} />
-                    <span className="truncate max-w-[120px]">{user.name || user.email}</span>
+                    {/* The name rejoins at xl, where there is room for it next to the logo
+                        and the full set of links. */}
+                    <span className="hidden xl:inline truncate max-w-[120px]">{user.name || user.email}</span>
                   </span>
                   <button
                     type="button"
@@ -165,13 +206,7 @@ export default function GlassNavigation() {
                 </>
               )}
 
-              <button
-                type="button"
-                onClick={() => setToolsOpen(true)}
-                className="btn btn-ghost h-8 lg:h-9 px-3.5 text-xs font-semibold rounded-full hidden xl:inline-flex items-center gap-1 cursor-pointer"
-              >
-                Launch Builder <ArrowRight size={13} />
-              </button>
+              
             </div>
 
             {/* Mobile Menu Toggle Button & Theme Picker */}
@@ -265,7 +300,11 @@ export default function GlassNavigation() {
         <AuthModal
           open={authOpen}
           initialMode={authMode}
-          onClose={() => setAuthOpen(false)}
+          initialNotice={authNotice}
+          onClose={() => {
+            setAuthOpen(false);
+            setAuthNotice('');
+          }}
           onSuccess={u => setUser(u)}
         />
       )}

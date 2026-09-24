@@ -21,7 +21,7 @@ import {
   Clock,
 } from 'lucide-react';
 import HomeStartDialog from '@/components/home-start-dialog';
-import AmbientAsciiScene from '@/components/ambient-ascii-scene';
+import CodePenHeroText from '@/components/codepen-hero-text';
 import Interactive3DCard from '@/components/interactive-3d-card';
 import {GOVERNMENT_JOBS, GUIDES_AND_RESOURCES} from '@/lib/government-jobs';
 import GovJobsBoard from '@/components/gov-jobs-board';
@@ -30,6 +30,7 @@ import UpdatesBox from '@/components/updates-box';
 import HeroShowcaseCarousel from '@/components/hero-showcase-carousel';
 import TipJarModal, { TipJarButton } from '@/components/tip-jar-modal';
 import CoverLetterSelectionModal from '@/components/cover-letter-selection-modal';
+import ToolsSelectorModal from '@/components/tools-selector-modal';
 
 const TOOLS=[
   {
@@ -38,7 +39,7 @@ const TOOLS=[
     tag:'Live now',
     tagClass:'tag gold',
     title:'Create PDS',
-    desc:'Fill the official CS Form 212 (Revised 2026) with a live mirror of the real form beside you. Smart-import your old PDS from CSV, Excel or PDF, then download a print-ready 8 × 14 sheet — all in your browser.',
+    desc:'Fill the official CS Form 212 (Revised 2026) with a live mirror of the real form beside you. Smart-import your old PDS from CSV, Excel or PDF, then download a print-ready official A4 sheet — all in your browser.',
     cta:'Build my PDS',
   },
   {
@@ -77,18 +78,15 @@ const STATS=[
 export default function Home(){
   const [tipOpen, setTipOpen] = useState(false);
   const [letterModalOpen, setLetterModalOpen] = useState(false);
+  const [toolsModalOpen, setToolsModalOpen] = useState(false);
 
-  return <>
+  return <div className="home-shell">
     <ScrollAnimations />
-    <section className="hero" style={{ position: 'relative', overflow: 'hidden' }}>
+
+    <section className="hero" style={{ position: 'relative', overflow: 'hidden', isolation: 'isolate', zIndex: 1 }}>
       <div className="hero-bg" aria-hidden/>
 
-      {/* Ambient Giant Watermark Text (CodePen PwWMZPv) */}
-      <div className="hero-bg-text" aria-hidden="true">
-        CAREERFORM
-      </div>
-
-      {/* Hero Top-Right Tip Jar (Image 1 & Image 2) */}
+      {/* Hero Top-Right Tip Jar */}
       <div
         style={{
           position: 'absolute',
@@ -99,15 +97,15 @@ export default function Home(){
       >
         <TipJarButton onClick={() => setTipOpen(true)} />
       </div>
-
-      <AmbientAsciiScene />
       <div className="container hero-grid" style={{ position: 'relative', zIndex: 2 }}>
         <div>
           <span className="hero-kicker">CS Form 212 · Revised 2026</span>
-          <h1>Your next chapter starts with <em>one honest page.</em></h1>
+          <CodePenHeroText />
           <p className="hero-sub">CareerForm PH turns the Civil Service Personal Data Sheet into something you can actually finish — a live official-form mirror, smart import from your old PDS, and letters that write themselves around your details.</p>
           <div className="hero-cta">
-            <HomeStartDialog />
+            <button type="button" className="btn btn-primary" onClick={() => setToolsModalOpen(true)}>
+                <Sparkles size={16} /> Launch Builder <ArrowRight size={16} />
+              </button>
             <Link className="btn btn-ghost" href="/jobs">Browse Gov Jobs</Link>
           </div>
           <div className="trust-row">
@@ -139,15 +137,63 @@ export default function Home(){
         >
           <div>
             <span className="hero-kicker">Complete Civil Service Toolkit</span>
-            <h2 style={{ fontSize: '36px', fontWeight: 800, margin: '12px 0 16px', lineHeight: 1.2 }}>
+            <h2 style={{ fontSize: '34px', fontWeight: 800, margin: '12px 0 14px', lineHeight: 1.2 }}>
               Everything you need to apply with confidence.
             </h2>
-            <p className="muted" style={{ fontSize: '15px', lineHeight: 1.6, maxWidth: '520px', margin: 0 }}>
-              Prepare official PDS documents, craft tailored application letters, and find real government job openings — with real-time updates and fixes for the official CS Form 212 (Revised 2026).
+            <p className="muted" style={{ fontSize: '15px', lineHeight: 1.65, maxWidth: '560px', margin: 0 }}>
+              CareerForm PH is a free, independent workspace for Filipino government applicants. It mirrors the
+              official Civil Service Personal Data Sheet (CS Form 212, Revised 2026) so what you type on screen is what
+              the agency receives on paper, writes your application and transmittal letters around the details you
+              already entered, and gathers real agency vacancies in one board — with none of your personal data leaving
+              your device unless you choose to keep it in an account.
             </p>
+
+            {/* The other half of this row used to sit empty beside the patch notes. It now
+                answers the question every visitor has: why sign in at all? */}
+            <div className="home-benefits">
+              <h3>What a free account gets you</h3>
+              <p className="muted">
+                No account is needed to fill in a PDS — but signing in turns the toolkit into a workspace that follows
+                you across phones, offices and internet cafés.
+              </p>
+              <ul>
+                <li>
+                  <ShieldCheck size={17} />
+                  <div>
+                    <strong>Your work is saved, not stranded</strong>
+                    <span>Every PDS, cover letter and annex draft syncs to your account. Start on a phone, finish on a laptop, print at the office.</span>
+                  </div>
+                </li>
+                <li>
+                  <BookOpen size={17} />
+                  <div>
+                    <strong>Letters that fill themselves in</strong>
+                    <span>Your name, address, education and eligibility flow straight into application and transmittal letters — you only edit the wording you care about.</span>
+                  </div>
+                </li>
+                <li>
+                  <Briefcase size={17} />
+                  <div>
+                    <strong>Bookmarks and agency alerts</strong>
+                    <span>Star any vacancy so it waits for you in the dashboard, and let an agency ping your device the moment it posts again.</span>
+                  </div>
+                </li>
+                <li>
+                  <Check size={17} />
+                  <div>
+                    <strong>Sign in the way you prefer</strong>
+                    <span>Username or email with a password, one-tap Google, and an optional authenticator app — plus a reset link by email whenever you forget.</span>
+                  </div>
+                </li>
+              </ul>
+              <p className="home-benefits-note">
+                Free forever, no watermark, no credit card. The form itself belongs to the Civil Service Commission — we
+                just help you fill it neatly and correctly.
+              </p>
+            </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
-            <UpdatesBox style={{ width: '100%', maxWidth: '520px' }} />
+            <UpdatesBox compact style={{ width: '100%', maxWidth: '420px' }} />
           </div>
         </div>
         <div className="cards-3">
@@ -176,14 +222,14 @@ export default function Home(){
       </div>
     </section>
 
-    {/* GOVERNMENT JOBS LIVE BOARD (Exact match to Image 1: Jobs Closing Soon, Metrics, Latest Jobs with View Details, New Jobs Today, Top Hiring Agencies, Browse by Region) */}
-    <section className="section" style={{background: '#040914'}}>
+    {/* GOVERNMENT JOBS LIVE BOARD — explicit stacking context keeps it above any fixed/ambient layers */}
+    <section className="section home-section-deep">
       <div className="container">
         <GovJobsBoard />
       </div>
     </section>
 
-    {/* GUIDES & RESOURCES SECTION (Image 4 match) */}
+    {/* GUIDES & RESOURCES SECTION */}
     <section className="section section-alt">
       <div className="container">
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px', marginBottom: '36px'}}>
@@ -277,7 +323,7 @@ export default function Home(){
           {STATS.map(s=><div className="stat" key={s.s}><b>{s.b}</b><span>{s.s}</span></div>)}
         </div>
         <div className="section-head" style={{marginTop:46,marginBottom:0}}>
-          <p style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}><Check size={16} style={{color:'var(--ok)'}}/> Print at 100% on 8 × 14 in paper</p>
+          <p style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}><Check size={16} style={{color:'var(--ok)'}}/> Print at 100% on official A4 paper</p>
         </div>
       </div>
     </section>
@@ -288,5 +334,8 @@ export default function Home(){
         onClose={() => setLetterModalOpen(false)}
       />
     )}
-  </>;
+
+    {/* LAUNCH BUILDER — all site tools in one launcher */}
+    <ToolsSelectorModal open={toolsModalOpen} onClose={() => setToolsModalOpen(false)} />
+  </div>;
 }

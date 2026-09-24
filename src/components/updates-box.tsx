@@ -1,18 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, Calendar, Tag, ChevronDown, ChevronUp, History, CheckCircle2 } from 'lucide-react';
-import { PATCH_NOTES, PatchNote } from '@/lib/patch-notes';
+import { Calendar, ChevronDown, ChevronUp, History } from 'lucide-react';
+import { PATCH_NOTES } from '@/lib/patch-notes';
 
 export default function UpdatesBox({
   className = '',
   style = {},
+  compact = false,
 }: {
   className?: string;
   style?: React.CSSProperties;
+  /**
+   * Compact mode is for the home page, where the box shares its row with editorial
+   * content: one release is shown, the list scrolls instead of growing, and opening the
+   * archive is a deliberate click rather than a wall of bullets.
+   */
+  compact?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const displayedNotes = expanded ? PATCH_NOTES : PATCH_NOTES.slice(0, 2);
+  const visibleCount = expanded ? PATCH_NOTES.length : compact ? 1 : 2;
+  const displayedNotes = PATCH_NOTES.slice(0, visibleCount);
 
   return (
     <aside
@@ -135,12 +143,12 @@ export default function UpdatesBox({
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
-          maxHeight: expanded ? '460px' : 'none',
-          overflowY: expanded ? 'auto' : 'visible',
-          paddingRight: expanded ? '4px' : '0',
+          maxHeight: expanded ? '460px' : compact ? '320px' : 'none',
+          overflowY: expanded || compact ? 'auto' : 'visible',
+          paddingRight: expanded || compact ? '4px' : '0',
         }}
       >
-        {displayedNotes.map((note, index) => (
+        {displayedNotes.map(note => (
           <article
             key={note.id}
             style={{
@@ -252,7 +260,7 @@ export default function UpdatesBox({
       </div>
 
       {/* Expand / Collapse Button if more than 2 patch notes */}
-      {PATCH_NOTES.length > 2 && (
+      {PATCH_NOTES.length > visibleCount && (
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
@@ -282,7 +290,7 @@ export default function UpdatesBox({
             </>
           ) : (
             <>
-              View older patch notes ({PATCH_NOTES.length - 2} more) <ChevronDown size={14} />
+              View older patch notes ({PATCH_NOTES.length - visibleCount} more) <ChevronDown size={14} />
             </>
           )}
         </button>

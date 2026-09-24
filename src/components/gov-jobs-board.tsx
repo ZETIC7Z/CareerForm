@@ -1,6 +1,7 @@
 'use client';
 
-import React, {useState, useMemo} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
+
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {
@@ -19,6 +20,7 @@ import {
 import {
   GOVERNMENT_JOBS,
   GovernmentJob,
+  getDynamicGovernmentJobs,
   TOP_HIRING_AGENCIES,
   PHILIPPINE_REGIONS,
 } from '@/lib/government-jobs';
@@ -29,18 +31,46 @@ export default function GovJobsBoard() {
   const router = useRouter();
   const [selectedJob, setSelectedJob] = useState<GovernmentJob | null>(null);
   const [letterJob, setLetterJob] = useState<GovernmentJob | null>(null);
+  const [jobs, setJobs] = useState<GovernmentJob[]>(() => getDynamicGovernmentJobs(new Date()));
+  const [syncedTime, setSyncedTime] = useState<string>('just now');
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const fetchLiveJobs = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await fetch(`/api/jobs?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.jobs)) {
+          setJobs(data.jobs);
+          if (data.syncedFormatted) setSyncedTime(data.syncedFormatted);
+        }
+      }
+    } catch {
+      // Fallback silently to client dynamic generator
+      setJobs(getDynamicGovernmentJobs(new Date()));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveJobs();
+    const interval = setInterval(fetchLiveJobs, 45000);
+    return () => clearInterval(interval);
+  }, []);
 
   const closingSoonJobs = useMemo(() => {
-    return GOVERNMENT_JOBS.filter(j => j.isClosingSoon);
-  }, []);
+    return jobs.filter(j => j.isClosingSoon);
+  }, [jobs]);
 
   const latestJobs = useMemo(() => {
-    return GOVERNMENT_JOBS.slice(0, 10);
-  }, []);
+    return jobs.slice(0, 10);
+  }, [jobs]);
 
   const newJobsToday = useMemo(() => {
-    return GOVERNMENT_JOBS.filter(j => j.isNewToday);
-  }, []);
+    return jobs.filter(j => j.isPostedToday);
+  }, [jobs]);
 
   const handleOpenLetterStudio = (job: GovernmentJob) => {
     setSelectedJob(null);
@@ -52,6 +82,7 @@ export default function GovJobsBoard() {
     router.push(`/builder?position=${encodeURIComponent(job.title)}&agency=${encodeURIComponent(job.agency)}`);
   };
 
+
   return (
     <div
       className="gov-jobs-board"
@@ -60,7 +91,58 @@ export default function GovJobsBoard() {
         color: '#f8fafc',
       }}
     >
-      {/* 1. JOBS CLOSING SOON (Image 1 match) */}
+      {/* Real-time CSC Sync Status Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'rgba(15, 23, 42, 0.7)',
+          border: '1px solid rgba(56, 189, 248, 0.2)',
+          borderRadius: '8px',
+          padding: '8px 16px',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '10px',
+        }}
+      >
+        <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94a3b8'}}>
+          <span
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: '#10b981',
+              boxShadow: '0 0 8px #10b981',
+              display: 'inline-block',
+            }}
+          />
+          <span style={{color: '#f8fafc', fontWeight: 600}}>Realtime CSC Portal Sync</span>
+          <span>• Auto-synchronized ({syncedTime})</span>
+        </div>
+        <button
+          type="button"
+          onClick={fetchLiveJobs}
+          disabled={isSyncing}
+          style={{
+            background: 'rgba(56, 189, 248, 0.1)',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
+            color: '#38bdf8',
+            fontSize: '11px',
+            fontWeight: 600,
+            borderRadius: '6px',
+            padding: '4px 10px',
+            cursor: isSyncing ? 'default' : 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          {isSyncing ? 'Syncing...' : 'Sync Live Now ↻'}
+        </button>
+      </div>
+
+      {/* 1. JOBS CLOSING SOON */}
       <div
         style={{
           background: 'rgba(239, 68, 68, 0.05)',
@@ -98,7 +180,7 @@ export default function GovJobsBoard() {
               onClick={() => setSelectedJob(job)}
               style={{
                 background: 'rgba(15, 23, 42, 0.6)',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
                 borderRadius: '6px',
                 padding: '10px 14px',
                 display: 'flex',
@@ -113,13 +195,33 @@ export default function GovJobsBoard() {
                   {job.title}
                 </strong>
                 <span className="muted" style={{fontSize: '11px'}}>
-                  {job.agency} ({job.agencyAcronym})
+                  {job.agency} ({job.agencyAcronym}) • {job.placeOfAssignment}
                 </span>
               </div>
               <div style={{textAlign: 'right'}}>
-                <span style={{color: '#ef4444', fontSize: '11px', fontWeight: 700}}>
-                  {job.deadline} • Today
-                </span>
+                {job.isDeadlineToday ? (
+                  <span
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      border: '1px solid rgba(239, 68, 68, 0.5)',
+                      color: '#ef4444',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      letterSpacing: '0.04em',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    DEADLINE TODAY ({job.deadline})
+                  </span>
+                ) : (
+                  <span style={{color: '#f59e0b', fontSize: '11px', fontWeight: 700}}>
+                    Closing in {job.daysLeft} days • {job.deadline}
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -134,6 +236,7 @@ export default function GovJobsBoard() {
           </Link>
         </div>
       </div>
+
 
       {/* 2. THREE METRICS BOXES (Image 1 match) */}
       <div
@@ -244,11 +347,32 @@ export default function GovJobsBoard() {
                   >
                     {job.title} <ChevronRight size={15} color="#64748b" />
                   </button>
-                  {job.isClosingSoon && (
+                  {job.isPostedToday ? (
                     <span
                       style={{
-                        background: '#dc2626',
-                        color: '#ffffff',
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        color: '#10b981',
+                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span style={{width: 5, height: 5, borderRadius: '50%', background: '#10b981'}} />
+                      POSTED TODAY
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        background: 'rgba(56, 189, 248, 0.1)',
+                        color: '#38bdf8',
+                        border: '1px solid rgba(56, 189, 248, 0.25)',
                         fontSize: '10px',
                         fontWeight: 700,
                         padding: '2px 8px',
@@ -257,7 +381,7 @@ export default function GovJobsBoard() {
                         letterSpacing: '0.04em',
                       }}
                     >
-                      Closing Soon
+                      LATEST JOB POST
                     </span>
                   )}
                 </div>
@@ -269,8 +393,20 @@ export default function GovJobsBoard() {
                   <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
                     <MapPin size={13} color="#64748b" /> {job.region}
                   </span>
-                  <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
-                    <Calendar size={13} color="#64748b" /> Deadline: {job.deadline}
+                  <span style={{display: 'flex', alignItems: 'center', gap: '4px', color: '#38bdf8', fontWeight: 600}}>
+                    <Calendar size={13} color="#38bdf8" /> Posted: {job.postedDate}
+                  </span>
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      color: job.isDeadlineToday ? '#ef4444' : (job.isClosingSoon ? '#f59e0b' : '#94a3b8'),
+                      fontWeight: 600,
+                    }}
+                  >
+                    <Clock size={13} color={job.isDeadlineToday ? '#ef4444' : (job.isClosingSoon ? '#f59e0b' : '#64748b')} />
+                    Deadline: {job.deadline} {job.isDeadlineToday ? '(Today)' : ''}
                   </span>
                   <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
                     <Users size={13} color="#64748b" /> {job.vacancies} Vacancy

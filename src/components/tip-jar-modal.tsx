@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, Heart, ExternalLink, Sparkles } from 'lucide-react';
 
@@ -413,9 +414,11 @@ export function TipJarButton({
   className?: string;
   style?: React.CSSProperties;
 }) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <div
-      className={`tip-jar-btn-wrapper ${className}`}
+      className={`dswd-translucent-donate-wrapper ${className}`}
       style={{
         position: 'relative',
         display: 'inline-block',
@@ -425,58 +428,157 @@ export function TipJarButton({
       <button
         type="button"
         onClick={onClick}
-        aria-label="Support Developer Tip Jar"
-        className="tip-jar-circle-btn"
-        title="Support Developer — Help maintain this site and regular updates"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        aria-label="Support Developer / Donate"
+        className="dswd-donate-btn"
+        title="Support Developer — Help maintain this site and continuous updates"
         style={{
-          width: '50px',
-          height: '50px',
-          borderRadius: '50%',
-          backgroundColor: '#0a0d17',
-          border: '2px solid #8b5cf6',
-          boxShadow: `
-            0 0 16px rgba(139, 92, 246, 0.65),
-            0 0 32px rgba(139, 92, 246, 0.35),
-            inset 0 0 12px rgba(139, 92, 246, 0.4)
-          `,
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          gap: '10px',
+          height: '44px',
+          padding: isHovered ? '0 18px 0 12px' : '0 16px 0 12px',
+          borderRadius: '999px',
+          backgroundColor: isHovered ? 'rgba(15, 23, 42, 0.88)' : 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          border: isHovered
+            ? '1.5px solid rgba(56, 189, 248, 0.85)'
+            : '1px solid rgba(255, 255, 255, 0.16)',
+          boxShadow: isHovered
+            ? '0 0 24px rgba(56, 189, 248, 0.45), 0 8px 25px rgba(0, 0, 0, 0.6)'
+            : '0 4px 15px rgba(0, 0, 0, 0.35)',
           cursor: 'pointer',
-          color: '#e2e8f0',
+          color: '#F8FAFC',
           transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.12)';
-          e.currentTarget.style.boxShadow =
-            '0 0 24px rgba(139, 92, 246, 0.9), 0 0 44px rgba(139, 92, 246, 0.5), inset 0 0 16px rgba(139, 92, 246, 0.6)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow =
-            '0 0 16px rgba(139, 92, 246, 0.65), 0 0 32px rgba(139, 92, 246, 0.35), inset 0 0 12px rgba(139, 92, 246, 0.4)';
+          transform: isHovered ? 'translateY(-2px) scale(1.03)' : 'none',
         }}
       >
-        {/* SVG Tip Jar with $ sign matching Image 2 */}
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          {/* Jar Lid */}
-          <path d="M7 3h10a1 1 0 0 1 1 1v1H6V4a1 1 0 0 1 1-1z" />
-          {/* Jar Body */}
-          <path d="M6 7h12c.55 0 1 .45.9 1l-1.1 11.5a2 2 0 0 1-2 1.5H8.2a2 2 0 0 1-2-1.5L5.1 8c-.1-.55.35-1 .9-1z" />
-          {/* Dollar Sign */}
-          <path d="M12 10v6" />
-          <path d="M13.5 11.5a1.5 1.5 0 0 0-3 0c0 1.5 3 1.5 3 3a1.5 1.5 0 0 1-3 0" />
-        </svg>
+        {/* Animated Icon: Heart pulses by default, switches to ZeticUZ logo on hover */}
+        <div className="dswd-icon-capsule">
+          <div className="icon-heart-wrap">
+            <Heart
+              size={15}
+              style={{
+                color: '#EF4444',
+                fill: '#EF4444',
+                animation: 'dswdHeartPulse 2.2s infinite ease-in-out',
+              }}
+            />
+          </div>
+          <div className="icon-zeticuz-wrap">
+            <Image
+              src="/brand/zeticuz-logo.svg"
+              alt="ZeticUZ Logo"
+              width={22}
+              height={22}
+              style={{ objectFit: 'contain' }}
+              unoptimized
+            />
+          </div>
+        </div>
+
+        {/* DSWD-Style Translucent Button Typography */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <span className="dswd-btn-title-default">
+            DONATE / SUPPORT
+          </span>
+          <span className="dswd-btn-title-hover">
+            ZETICUZ SUPPORT
+          </span>
+          <span
+            style={{
+              fontSize: '9px',
+              fontWeight: 600,
+              color: 'rgba(148, 163, 184, 0.85)',
+              letterSpacing: '0.04em',
+              lineHeight: 1,
+            }}
+          >
+            Maintain Free Updates
+          </span>
+        </div>
       </button>
+
+      <style jsx global>{`
+        .dswd-icon-capsule {
+          position: relative;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: rgba(239, 68, 68, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+        .icon-heart-wrap {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: opacity 0.25s ease, transform 0.25s ease;
+          opacity: 1;
+          transform: scale(1);
+        }
+        .icon-zeticuz-wrap {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          opacity: 0;
+          transform: scale(0.5) rotate(-20deg);
+        }
+        .dswd-donate-btn:hover .dswd-icon-capsule {
+          background: rgba(56, 189, 248, 0.25);
+        }
+        .dswd-donate-btn:hover .icon-heart-wrap {
+          opacity: 0;
+          transform: scale(0.4);
+        }
+        .dswd-donate-btn:hover .icon-zeticuz-wrap {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+        }
+        .dswd-btn-title-default {
+          font-size: 11.5px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #F1F5F9;
+          line-height: 1.1;
+          display: block;
+        }
+        .dswd-btn-title-hover {
+          font-size: 11.5px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #38BDF8;
+          line-height: 1.1;
+          display: none;
+        }
+        .dswd-donate-btn:hover .dswd-btn-title-default {
+          display: none;
+        }
+        .dswd-donate-btn:hover .dswd-btn-title-hover {
+          display: block;
+        }
+        @keyframes dswdHeartPulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.2);
+          }
+        }
+      `}</style>
     </div>
   );
 }

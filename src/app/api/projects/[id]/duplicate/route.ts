@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { getCurrentUser } from '@/lib/auth';
-import { getProjectsCollection, PDSProject } from '@/lib/db';
+import { getProjectsCollection, toPublicProject, PDSProject } from '@/lib/db';
 
 export async function POST(
   req: Request,
@@ -38,7 +38,7 @@ export async function POST(
     };
 
     await col.insertOne(duplicatedProject);
-    return NextResponse.json({ ok: true, project: duplicatedProject }, { status: 201 });
+    return NextResponse.json({ ok: true, project: toPublicProject(duplicatedProject) }, { status: 201 });
   } catch (error) {
     console.error('Failed to duplicate project:', error);
     return NextResponse.json({ error: 'Failed to duplicate project' }, { status: 500 });

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { getCurrentUser } from '@/lib/auth';
-import { getProjectsCollection, PDSProject } from '@/lib/db';
+import { getProjectsCollection, toPublicProject, PDSProject } from '@/lib/db';
 import { emptyPDS, progress, validatedDraft } from '@/lib/model';
 
 // GET /api/projects - List all projects for authenticated user
@@ -18,7 +18,7 @@ export async function GET() {
       .sort({ lastModified: -1 })
       .toArray();
 
-    return NextResponse.json({ ok: true, projects });
+    return NextResponse.json({ ok: true, projects: projects.map(toPublicProject) });
   } catch (error) {
     console.error('Failed to load projects:', error);
     return NextResponse.json({ error: 'Failed to load projects' }, { status: 500 });
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const title = (body.title || 'Personal Data Sheet 2026').trim().slice(0, 120);
     const description = (body.description || '').trim().slice(0, 250);
+    const kind: PDSProject['kind'] = body.kind === 'cover-letter' ? 'cover-letter' : 'pds';
 
     let initialData = emptyPDS();
     if (body.data) {
@@ -60,12 +61,13 @@ export async function POST(req: Request) {
       lastModified: now,
       createdAt: now,
       isFavorite: false,
+      kind,
     };
 
     const col = await getProjectsCollection();
     await col.insertOne(newProject);
 
-    return NextResponse.json({ ok: true, project: newProject }, { status: 201 });
+    return NextResponse.json({ ok: true, project: toPublicProject(newProject) }, { status: 201 });
   } catch (error) {
     console.error('Failed to create project:', error);
     return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });

@@ -6,13 +6,14 @@
  * livebar — zoom out / % / zoom in / fit / reset. The page never scrolls the
  * preview away; there is no scrollbar on the preview at all.
  */
-import {KeyboardEvent, PointerEvent, ReactNode, useMemo, useState} from 'react';
+import {KeyboardEvent, PointerEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ZoomIn,ZoomOut,Maximize2,RotateCcw,Move} from 'lucide-react';
 
 const ZOOM_STEP=10;
-const MIN_ZOOM=35;
+const MIN_ZOOM=25;
 const MAX_ZOOM=200;
-const FIT_ZOOM=54;
+const DEFAULT_ZOOM=54;
+const STAGE_PADDING=24;
 const PAN_STEP=32;
 const PAN_STEP_LARGE=160;
 
@@ -30,14 +31,48 @@ export default function CanvasStage({
   controls?:'zoom'|'none';
   onExpand?:()=>void;
 }){
-  const [zoom,setZoom]=useState(FIT_ZOOM);
+  const stageRef=useRef<HTMLDivElement|null>(null);
+  const paperRef=useRef<HTMLDivElement|null>(null);
+  const [zoom,setZoom]=useState(DEFAULT_ZOOM);
   const [pan,setPan]=useState({x:0,y:0});
   const [dragStart,setDragStart]=useState<{pointerId:number;x:number;y:number;panX:number;panY:number}|null>(null);
+  /** While set, the sheet keeps itself fitted to the stage — every page of every paper size. */
+  const [autoFit,setAutoFit]=useState(true);
 
   const transform=useMemo(()=>({transform:`translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom/100})`}),[pan.x,pan.y,zoom]);
 
-  const updateZoom=(next:number)=>setZoom(Math.min(MAX_ZOOM,Math.max(MIN_ZOOM,next)));
-  const resetCanvas=()=>{setZoom(FIT_ZOOM);setPan({x:0,y:0})};
+  // Fit the rendered sheet inside the stage instead of trusting a fixed percentage:
+  // the stage is a fixed-height viewport, so a hardcoded zoom clips the taller pages.
+  const fitToStage=useCallback(()=>{
+    const stage=stageRef.current, paper=paperRef.current;
+    if(!stage||!paper)return;
+    // Measure the rendered sheet itself, not the wrapper: as a flex item the wrapper is
+    // stretched to the stage height, which would hide how tall the page really is.
+    const sheet=(paper.firstElementChild as HTMLElement|null) ?? paper;
+    const width=sheet.offsetWidth||paper.offsetWidth;
+    const height=sheet.offsetHeight||paper.offsetHeight;
+    if(!width||!height)return;
+    const scale=Math.min(
+      (stage.clientWidth-STAGE_PADDING)/width,
+      (stage.clientHeight-STAGE_PADDING)/height
+    );
+    setZoom(Math.min(MAX_ZOOM,Math.max(MIN_ZOOM,Math.round(scale*100))));
+  },[setZoom]);
+
+  useEffect(()=>{
+    const stage=stageRef.current, paper=paperRef.current;
+    if(!stage||!paper)return;
+    const observer=new ResizeObserver(()=>{if(autoFit)fitToStage()});
+    observer.observe(stage);
+    observer.observe(paper);
+    if(paper.firstElementChild)observer.observe(paper.firstElementChild);
+    return ()=>observer.disconnect();
+  },[autoFit,fitToStage]);
+
+  useEffect(()=>{if(autoFit)fitToStage()},[autoFit,fitToStage]);
+
+  const updateZoom=(next:number)=>{setAutoFit(false);setZoom(Math.min(MAX_ZOOM,Math.max(MIN_ZOOM,next)))};
+  const resetCanvas=()=>{setAutoFit(true);setPan({x:0,y:0});fitToStage()};
 
   const pointerDown=(event:PointerEvent<HTMLDivElement>)=>{
     if(event.button!==0)return;
@@ -71,7 +106,7 @@ export default function CanvasStage({
         <button type="button" className="livebar-btn" aria-label="Zoom out" title="Zoom out" onClick={()=>updateZoom(zoom-ZOOM_STEP)} disabled={zoom<=MIN_ZOOM}><ZoomOut size={15}/></button>
         <span className="livebar-zoom" aria-live="polite" aria-atomic="true">{zoom}%</span>
         <button type="button" className="livebar-btn" aria-label="Zoom in" title="Zoom in" onClick={()=>updateZoom(zoom+ZOOM_STEP)} disabled={zoom>=MAX_ZOOM}><ZoomIn size={15}/></button>
-        <button type="button" className="livebar-btn" aria-label="Fullscreen preview" title="Fullscreen Preview (Finish & Review Shortcut)" onClick={onExpand || (()=>updateZoom(FIT_ZOOM))}><Maximize2 size={14}/></button>
+        <button type="button" className="livebar-btn" aria-label="Fullscreen preview" title="Fullscreen Preview (Finish & Review Shortcut)" onClick={onExpand || resetCanvas}><Maximize2 size={14}/></button>
         <button type="button" className="livebar-btn" aria-label="Reset view" title="Reset view" onClick={resetCanvas}><RotateCcw size={14}/></button>
       </div>}
 
@@ -86,6 +121,7 @@ export default function CanvasStage({
     </div>
 
     <div
+      ref={stageRef}
       tabIndex={0}
       role="group"
       aria-label="Live document canvas. Drag the sheet or use arrow keys to pan; Shift moves further; Home recentres."
@@ -98,7 +134,7 @@ export default function CanvasStage({
     >
       <div className="stage-grid" aria-hidden="true"/>
       <div className="stage-inner">
-        <div className="stage-paper transform-gpu" style={transform}>{children}</div>
+        <div ref={paperRef} className="stage-paper transform-gpu" style={transform}>{children}</div>
       </div>
     </div>
   </div>;

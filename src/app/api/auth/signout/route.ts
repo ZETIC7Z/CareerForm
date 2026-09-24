@@ -21,7 +21,21 @@ export async function POST(req: NextRequest) {
     }
   } catch {}
 
-  const response = NextResponse.json({ ok: true });
-  response.cookies.delete(SESSION_COOKIE_NAME);
+  const response = NextResponse.json(
+    { ok: true },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
+  // Written explicitly rather than via `delete()` so the expiry carries exactly the same
+  // path and flags the cookie was set with — a mismatch there leaves a live cookie behind
+  // and the browser keeps sending it.
+  response.cookies.set({
+    name: SESSION_COOKIE_NAME,
+    value: '',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  });
   return response;
 }

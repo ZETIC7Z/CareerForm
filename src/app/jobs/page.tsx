@@ -1,6 +1,8 @@
 'use client';
 
-import React, {useState, useMemo} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
+
+
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {
@@ -20,49 +22,132 @@ import {
   Mail,
   Shield,
   Users,
+  Bookmark,
+  BookmarkCheck,
+  Loader2,
 } from 'lucide-react';
+import BrandMark from '@/components/brand-logo';
 import {
   GOVERNMENT_JOBS,
   GovernmentJob,
+  getDynamicGovernmentJobs,
   TOP_HIRING_AGENCIES,
   PHILIPPINE_REGIONS,
+  PHILIPPINE_AGENCIES,
 } from '@/lib/government-jobs';
 import JobDetailsModal from '@/components/job-details-modal';
 import ApplicationLetterModal from '@/components/application-letter-modal';
 
 export default function JobsPage() {
   const router = useRouter();
+  const [jobs, setJobs] = useState<GovernmentJob[]>(() => getDynamicGovernmentJobs(new Date()));
+  const [syncedTime, setSyncedTime] = useState<string>('just now');
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [search, setSearch] = useState('');
   const [selectedAgency, setSelectedAgency] = useState('All');
   const [selectedRegion, setSelectedRegion] = useState('All');
   const [selectedJob, setSelectedJob] = useState<GovernmentJob | null>(null);
   const [letterJob, setLetterJob] = useState<GovernmentJob | null>(null);
 
-  const agencies = useMemo(() => {
-    return ['All', ...new Set(GOVERNMENT_JOBS.map(j => j.agencyAcronym))];
+  // Bookmarks live in the signed-in user's account, so the same job list is
+  // starred on every device and mirrored in the dashboard's Bookmarks tab.
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [bookmarkBusy, setBookmarkBusy] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const userRes = await fetch('/api/auth/me');
+        const userData = await userRes.json();
+        if (!userData?.ok || !userData.user) return;
+        if (!cancelled) setSignedIn(true);
+        const res = await fetch('/api/bookmarks');
+        const data = await res.json();
+        if (data?.ok && Array.isArray(data.bookmarks) && !cancelled) {
+          setSavedIds(data.bookmarks.map((b: { jobId: string }) => b.jobId));
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  const regions = useMemo(() => {
-    return ['All', ...new Set(GOVERNMENT_JOBS.map(j => j.region))];
+  const toggleBookmark = async (job: GovernmentJob) => {
+    if (!signedIn) {
+      router.push('/?action=signin');
+      return;
+    }
+    const isSaved = savedIds.includes(job.id);
+    setBookmarkBusy(job.id);
+    // Optimistic flip so the star reacts instantly, then reconcile with the server.
+    setSavedIds(prev => (isSaved ? prev.filter(id => id !== job.id) : [...prev, job.id]));
+    try {
+      const res = await fetch('/api/bookmarks', {
+        method: isSaved ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id, job }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) throw new Error('failed');
+      if (Array.isArray(data.savedIds)) setSavedIds(data.savedIds);
+    } catch {
+      setSavedIds(prev => (isSaved ? [...prev, job.id] : prev.filter(id => id !== job.id)));
+    } finally {
+      setBookmarkBusy(null);
+    }
+  };
+
+  const fetchLiveJobs = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await fetch(`/api/jobs?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.jobs)) {
+          setJobs(data.jobs);
+          if (data.syncedFormatted) setSyncedTime(data.syncedFormatted);
+        }
+      }
+    } catch {
+      setJobs(getDynamicGovernmentJobs(new Date()));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveJobs();
+    const interval = setInterval(fetchLiveJobs, 45000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredJobs = useMemo(() => {
-    return GOVERNMENT_JOBS.filter(job => {
+    return jobs.filter(job => {
       const matchSearch =
         !search ||
         job.title.toLowerCase().includes(search.toLowerCase()) ||
         job.agency.toLowerCase().includes(search.toLowerCase()) ||
         job.placeOfAssignment.toLowerCase().includes(search.toLowerCase()) ||
-        job.competency.toLowerCase().includes(search.toLowerCase());
-      const matchAgency = selectedAgency === 'All' || job.agencyAcronym === selectedAgency;
-      const matchRegion = selectedRegion === 'All' || job.region === selectedRegion;
+        job.competency.toLowerCase().includes(search.toLowerCase()) ||
+        job.skills.some(s => s.toLowerCase().includes(search.toLowerCase()));
+      const matchAgency =
+        selectedAgency === 'All' ||
+        job.agencyAcronym === selectedAgency ||
+        job.agency.toLowerCase().includes(selectedAgency.toLowerCase());
+      const matchRegion =
+        selectedRegion === 'All' ||
+        job.region === selectedRegion ||
+        job.region.toLowerCase().includes(selectedRegion.split(' - ')[0].toLowerCase().trim()) ||
+        (selectedRegion.includes('Central Visayas') && (job.region.toLowerCase().includes('cebu') || job.placeOfAssignment.toLowerCase().includes('cebu')));
       return matchSearch && matchAgency && matchRegion;
     });
-  }, [search, selectedAgency, selectedRegion]);
+  }, [jobs, search, selectedAgency, selectedRegion]);
 
   const closingSoonJobs = useMemo(() => {
-    return GOVERNMENT_JOBS.filter(j => j.isClosingSoon);
-  }, []);
+    return jobs.filter(j => j.isClosingSoon);
+  }, [jobs]);
+
 
   const handleProceedToPds = (job: GovernmentJob) => {
     setLetterJob(null);
@@ -74,34 +159,53 @@ export default function JobsPage() {
       className="app-shell"
       style={{
         minHeight: '100vh',
-        background: '#030712',
+        // Transparent so the site-wide animated field shows through, edge to edge.
+        background: 'transparent',
         color: '#f8fafc',
         fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
       }}
     >
-      {/* Top Navbar */}
+      {/* Top Navbar — a secondary toolbar pinned under the main site navigation */}
       <header
-        className="workspace-chrome"
+        className="workspace-chrome jobs-toolbar"
         style={{
           position: 'sticky',
-          top: 0,
-          zIndex: 30,
-          background: 'rgba(3, 7, 18, 0.85)',
+          top: 'var(--site-nav-h-compact, 112px)',
+          zIndex: 20,
+          height: 'auto',
+          minHeight: '64px',
+          padding: '10px 18px',
+          gap: '18px',
+          flexWrap: 'wrap',
+          background: 'rgba(3, 7, 18, 0.92)',
           backdropFilter: 'blur(12px)',
           borderBottom: '1px solid #1e293b',
         }}
       >
         <div className="wc-left">
           <Link className="wc-brand" href="/" aria-label="CareerForm PH home">
-            <span className="font-bold tracking-tight text-[var(--heading)] text-base flex items-center gap-2 select-none">
-              CareerForm
+            <span className="flex items-center gap-2 select-none">
+              <BrandMark height={32}/>
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#06b6d4]/40 bg-[#06b6d4]/10 text-[#06b6d4]">
                 GOV JOBS PH
               </span>
             </span>
           </Link>
         </div>
-        <div className="wc-right">
+        <div className="wc-right" style={{display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap'}}>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11.5px',
+              color: '#94a3b8',
+              paddingRight: '4px',
+            }}
+          >
+            <Shield size={13} color="#10b981" />
+            {savedIds.length > 0 ? `${savedIds.length} bookmarked` : 'CSC verified postings'}
+          </span>
           <Link
             href="/builder"
             className="wc-btn wc-btn-secondary"
@@ -110,7 +214,7 @@ export default function JobsPage() {
             <FileText size={14} /> Create PDS
           </Link>
           <Link
-            href="/builder"
+            href="/coverletter"
             className="wc-btn wc-btn-secondary"
             style={{display: 'flex', alignItems: 'center', gap: '6px'}}
           >
@@ -223,32 +327,34 @@ export default function JobsPage() {
               >
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px'}}>
                   <strong style={{fontSize: '14px', color: '#f8fafc', display: 'block'}}>{job.title}</strong>
-                  {job.isToday ? (
+                  {job.isDeadlineToday ? (
                     <span
                       style={{
-                        padding: '2px 6px',
+                        padding: '3px 8px',
                         fontSize: '10px',
-                        fontWeight: 700,
+                        fontWeight: 800,
                         borderRadius: '4px',
                         background: 'rgba(239, 68, 68, 0.2)',
                         color: '#ef4444',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        letterSpacing: '0.04em',
                       }}
                     >
-                      TODAY
+                      DEADLINE TODAY ({job.deadline})
                     </span>
                   ) : (
                     <span
                       style={{
-                        padding: '2px 6px',
+                        padding: '3px 8px',
                         fontSize: '10px',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         borderRadius: '4px',
-                        background: 'rgba(245, 158, 11, 0.2)',
+                        background: 'rgba(245, 158, 11, 0.15)',
                         color: '#f59e0b',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
                       }}
                     >
-                      {job.deadline}
+                      Closing in {job.daysLeft} days • {job.deadline}
                     </span>
                   )}
                 </div>
@@ -297,6 +403,7 @@ export default function JobsPage() {
             <select
               value={selectedAgency}
               onChange={e => setSelectedAgency(e.target.value)}
+              aria-label="Filter by Agency"
               style={{
                 padding: '12px 16px',
                 borderRadius: '10px',
@@ -304,17 +411,21 @@ export default function JobsPage() {
                 border: '1px solid #1e293b',
                 color: '#f8fafc',
                 fontSize: '13px',
+                cursor: 'pointer',
               }}
             >
               <option value="All">All Agencies</option>
-              {agencies.filter(a => a !== 'All').map(a => (
-                <option key={a} value={a}>{a}</option>
+              {PHILIPPINE_AGENCIES.map(a => (
+                <option key={a.acronym} value={a.acronym}>
+                  {a.acronym} — {a.name}
+                </option>
               ))}
             </select>
 
             <select
               value={selectedRegion}
               onChange={e => setSelectedRegion(e.target.value)}
+              aria-label="Filter by Region"
               style={{
                 padding: '12px 16px',
                 borderRadius: '10px',
@@ -322,11 +433,14 @@ export default function JobsPage() {
                 border: '1px solid #1e293b',
                 color: '#f8fafc',
                 fontSize: '13px',
+                cursor: 'pointer',
               }}
             >
               <option value="All">All Regions</option>
-              {regions.filter(r => r !== 'All').map(r => (
-                <option key={r} value={r}>{r}</option>
+              {PHILIPPINE_REGIONS.map(r => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
               ))}
             </select>
           </div>
@@ -376,11 +490,32 @@ export default function JobsPage() {
                   >
                     {job.title} <ChevronRight size={16} color="#64748b" />
                   </button>
-                  {job.isClosingSoon && (
+                  {job.isPostedToday ? (
                     <span
                       style={{
-                        background: '#dc2626',
-                        color: '#ffffff',
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        color: '#10b981',
+                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span style={{width: 5, height: 5, borderRadius: '50%', background: '#10b981'}} />
+                      POSTED TODAY
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        background: 'rgba(56, 189, 248, 0.1)',
+                        color: '#38bdf8',
+                        border: '1px solid rgba(56, 189, 248, 0.25)',
                         fontSize: '10px',
                         fontWeight: 700,
                         padding: '2px 8px',
@@ -389,7 +524,7 @@ export default function JobsPage() {
                         letterSpacing: '0.04em',
                       }}
                     >
-                      Closing Soon
+                      LATEST JOB POST
                     </span>
                   )}
                 </div>
@@ -401,8 +536,20 @@ export default function JobsPage() {
                   <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
                     <MapPin size={13} color="#64748b" /> {job.region}
                   </span>
-                  <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
-                    <Calendar size={13} color="#64748b" /> Deadline: {job.deadline}
+                  <span style={{display: 'flex', alignItems: 'center', gap: '4px', color: '#38bdf8', fontWeight: 600}}>
+                    <Calendar size={13} color="#38bdf8" /> Posted: {job.postedDate}
+                  </span>
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      color: job.isDeadlineToday ? '#ef4444' : (job.isClosingSoon ? '#f59e0b' : '#94a3b8'),
+                      fontWeight: 600,
+                    }}
+                  >
+                    <Clock size={13} color={job.isDeadlineToday ? '#ef4444' : (job.isClosingSoon ? '#f59e0b' : '#64748b')} />
+                    Deadline: {job.deadline} {job.isDeadlineToday ? '(Today)' : ''}
                   </span>
                   <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
                     <Users size={13} color="#64748b" /> {job.vacancies} Vacancy
@@ -410,8 +557,32 @@ export default function JobsPage() {
                 </div>
               </div>
 
-              {/* View Details Only Button (Image 1 match) */}
-              <div>
+              {/* Bookmark + View Details */}
+              <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                <button
+                  type="button"
+                  onClick={() => toggleBookmark(job)}
+                  aria-pressed={savedIds.includes(job.id)}
+                  title={savedIds.includes(job.id) ? 'Remove from bookmarks' : 'Save job to bookmarks'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: savedIds.includes(job.id) ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255,255,255,0.04)',
+                    color: savedIds.includes(job.id) ? '#06b6d4' : '#94a3b8',
+                    border: `1px solid ${savedIds.includes(job.id) ? 'rgba(6, 182, 212, 0.45)' : '#1e293b'}`,
+                    borderRadius: '6px',
+                    padding: '8px 14px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: bookmarkBusy === job.id ? 'progress' : 'pointer',
+                  }}
+                >
+                  {bookmarkBusy === job.id
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : savedIds.includes(job.id) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+                  {savedIds.includes(job.id) ? 'Saved' : 'Save'}
+                </button>
                 <button
                   type="button"
                   onClick={() => setSelectedJob(job)}
@@ -496,6 +667,8 @@ export default function JobsPage() {
         <JobDetailsModal
           job={selectedJob}
           onClose={() => setSelectedJob(null)}
+          isSaved={savedIds.includes(selectedJob.id)}
+          onToggleBookmark={toggleBookmark}
           onOpenLetterStudio={job => {
             setSelectedJob(null);
             setLetterJob(job);

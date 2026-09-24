@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import {ArrowRight,Code2,Clapperboard,Camera,Users,Mail} from 'lucide-react';
+import {ArrowRight,Clapperboard,Camera,Users,Mail} from 'lucide-react';
 import {SITE} from '@/lib/site';
 
 export const metadata:Metadata={
@@ -45,11 +45,10 @@ export default function About(){
           <a className="btn btn-ghost btn-sm" href={SITE.portfolio} target="_blank" rel="noopener noreferrer">My portfolio</a>
         </p>
         <p style={{display:'flex',gap:16,marginTop:10,color:'var(--muted)'}}>
-          <a href={SITE.socials[0].href} target="_blank" rel="noopener noreferrer" aria-label="GitHub" style={{display:'inline-flex'}}><Code2 size={18}/></a>
-          <a href={SITE.socials[1].href} target="_blank" rel="noopener noreferrer" aria-label="YouTube" style={{display:'inline-flex'}}><Clapperboard size={18}/></a>
-          <a href={SITE.socials[2].href} target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{display:'inline-flex'}}><Camera size={18}/></a>
-          <a href={SITE.socials[3].href} target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={{display:'inline-flex'}}><Users size={18}/></a>
-          <a href={SITE.socials[4].href} aria-label="Email" style={{display:'inline-flex'}}><Mail size={18}/></a>
+          <a href={SITE.socials[0].href} target="_blank" rel="noopener noreferrer" aria-label="YouTube" style={{display:'inline-flex'}}><Clapperboard size={18}/></a>
+          <a href={SITE.socials[1].href} target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{display:'inline-flex'}}><Camera size={18}/></a>
+          <a href={SITE.socials[2].href} target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={{display:'inline-flex'}}><Users size={18}/></a>
+          <a href={SITE.socials[3].href} aria-label="Email" style={{display:'inline-flex'}}><Mail size={18}/></a>
         </p>
       </div>
     </section>

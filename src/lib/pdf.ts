@@ -1,9 +1,29 @@
-import {PDFDocument,PDFFont,PDFPage,rgb,StandardFonts} from 'pdf-lib';
+import {PDFDocument,PDFFont,PDFPage,rgb,StandardFonts,pushGraphicsState,popGraphicsState,moveTo,lineTo,closePath,clip,endPath} from 'pdf-lib';
 import mapping from './pdf-map.json';
-import {PDS,getValue,fields,tables,displayDate,displayDateCompact,formatFullDate,sortWorkRecordsDescending,questions} from './model';
+import calibrationJson from './pdf-calibration.json';
+import {PDS,getValue,fields,tables,displayDate,formatFullDate,sortWorkRecordsDescending,sortEducationRecords,questions} from './model';
 import {Letter,applyPlaceholders,longDate,salutation} from './letter';
+import {TEMPLATE_REVISION} from './site';
 export type Box={page:number;x:number;y:number;w:number;h:number};
+export type Rect=[number,number,number,number,number];
 export const pdfMap:Record<string,Box>=mapping;
+
+/**
+ * Everything the official A4 template needs beyond the field map. These values were
+ * originally tuned by hand against the older 8in x 14in template and are converted onto
+ * the A4 page by `scripts/build-pdf-calibration.py` (see scripts/build-pdf-map.py).
+ */
+export const calibration=calibrationJson as unknown as {
+  page:{width:number;height:number};
+  ticks:Record<string,[string,number,number][]>;
+  boxes:Record<string,Rect>;
+  questionTicks:number[][];
+  questionDetailY:number[];
+  signatureBoxes:Rect[];
+  dateBoxes:Rect[];
+};
+const box=(key:keyof typeof calibration.boxes):Box=>{const [page,x,y,w,h]=calibration.boxes[key];return {page,x,y,w,h}};
+const rectBox=([page,x,y,w,h]:Rect):Box=>({page,x,y,w,h});
 // Self-healing memo for binary template stream
 const memo=(slot:{current?:Promise<ArrayBuffer>},path:string)=>slot.current??=asset(path).catch(error=>{slot.current=undefined;throw error});
 const templates:{current?:Promise<ArrayBuffer>}={};
@@ -11,7 +31,7 @@ async function asset(path:string){
   // First attempt JSON template endpoint to eliminate browser download managers (IDM) interception
   if(!path.endsWith('.ttf')){
     try{
-      const res=await fetch('/api/template');
+      const res=await fetch(`/api/template?v=${TEMPLATE_REVISION}`);
       if(res.ok){
         const json=await res.json();
         if(json?.template){
@@ -86,6 +106,11 @@ function fit(
   let size = Math.min(max, b.h * 0.78);
   let lines = wrap(text, font, size, availWidth);
   const lineGapRatio = 1.14;
+  // The map's cell heights are interpolated and run ~1pt tall, so text sized to the mapped
+  // height spills past the printed rule below. Reserve a proportional margin instead: the
+  // caller only ever gets a block that the printed cell itself can hold.
+  const slack = Math.max(0.35, Math.min(1.6, b.h * 0.1));
+  const availHeight = b.h - slack;
 
   if (singleLine) {
     while (lines.length > 1 && size > 4.0) {
@@ -94,11 +119,11 @@ function fit(
     }
   }
 
-  while (lines.length * size * lineGapRatio > b.h && size > 4.0) {
+  while (lines.length * size * lineGapRatio > availHeight && size > 4.0) {
     size -= 0.2;
     lines = wrap(text, font, size, availWidth);
   }
-  if (lines.length * size * lineGapRatio > b.h + 0.6) return false;
+  if (lines.length * size * lineGapRatio > availHeight + 0.35) return false;
 
   const lineGap = size * lineGapRatio;
   const cellCenter = page.getHeight() - b.y - b.h / 2;
@@ -126,19 +151,22 @@ function fit(
 
 function tick(page:PDFPage,x:number,y:number){page.drawLine({start:{x:x+.8,y:page.getHeight()-y-3},end:{x:x+2.7,y:page.getHeight()-y-5.1},thickness:1});page.drawLine({start:{x:x+2.7,y:page.getHeight()-y-5.1},end:{x:x+5.8,y:page.getHeight()-y-.3},thickness:1})}
 export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:Uint8Array}){
- const template=provided?.template??await memo(templates,'/api/template');
+ const template=provided?.template??await memo(templates,`/api/template?v=${TEMPLATE_REVISION}`);
  const pdf=await PDFDocument.load(template);
  // Official standard PDF Helvetica — 100% reliable across all browsers and devices without external font dependencies
  const font=await pdf.embedFont(StandardFonts.Helvetica);
  const fontBold=await pdf.embedFont(StandardFonts.HelveticaBold);
  const pages=pdf.getPages();const overflow:{label:string;value:string}[]=[];
 
- // Automatically sort work experience records in reverse-chronological order (most recent first)
+ // Automatically sort work experience records in reverse-chronological order (most recent
+ // first) and education records onto the form's own row order, so an imported record always
+ // lands on the row that carries its level.
  const effectiveData: PDS = {
    ...data,
    records: {
      ...data.records,
      work: sortWorkRecordsDescending(data.records?.work || []),
+     education: sortEducationRecords(data.records?.education || []),
    },
  };
 
@@ -154,96 +182,44 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
    }
  };
  for(const [key,box0] of Object.entries(pdfMap)){
-   let b={...box0};if(['idType','idNumber','idIssue'].includes(key)){b.x=116;b.w=98}
+   const b={...box0};
    if(key==='accomplished') continue; // Handled explicitly below with exact coordinates and formatting
    let value=getValue(effectiveData,key);if(!value)continue;
    const field=fields.find(f=>f.key===key);
-   const isWorkDate = /^work\.\d+\.(from|to)$/.test(key);
-   if (isWorkDate) {
-     value = displayDateCompact(value);
-   } else if (field?.type==='date'||/\.(from|to)$/.test(key)) {
+   // Every date cell on the form asks for mm/dd/yyyy, the work-experience columns included:
+   // they are narrow, so the value is drawn on one line and the size steps down to fit.
+   if (field?.type==='date'||/\.(from|to)$/.test(key)) {
      value = displayDate(value);
    }
    draw(key,value,b);
  }
  const p=pages[0];const v=effectiveData.values;
- const options:Record<string,Record<string,[number,number]>>={sex:{Male:[100,199.5],Female:[179.5,199.2]},civilStatus:{Single:[100,214],Married:[179.5,214.4],Widowed:[100,224.5],Separated:[179.5,224.7],Other:[100,235.8]},citizenship:{Filipino:[366.5,161.8],'Dual Citizenship':[407.8,161.6]},citizenshipBasis:{'By birth':[422.3,174.5],'By naturalization':[459.2,171.3]}};
+ const options:Record<string,Record<string,[number,number]>>={};
+ for(const [group,entries] of Object.entries(calibration.ticks)){
+   options[group]={};
+   for(const [label,x,y] of entries)options[group][label]=[Number(x),Number(y)];
+ }
  for(const [key,choices] of Object.entries(options)){const xy=choices[v[key]];if(xy)tick(p,...xy)}
- if(v.citizenshipCountry)draw('citizenshipCountry',v.citizenshipCountry,{page:0,x:445,y:184,w:115,h:10});
- if(v.civilStatus==='Other'&&v.civilOther)draw('civilOther',v.civilOther,{page:0,x:135,y:234,w:115,h:10});
-
-  // Fix Vocational / Trade Course label on Page 0 (official template text has misaligned baseline where VOCATIONAL was printed over SECONDARY)
-  // Use exact template gray and REGULAR font (Helvetica 5.5pt, black) matching ELEMENTARY, SECONDARY, COLLEGE, GRADUATE STUDIES
-  const levelGray = rgb(234 / 255, 234 / 255, 234 / 255);
-  // Keep background rectangle strictly inside cell interior, extending down to 290.0 to cover template TRADE baseline artifact
-  pages[0].drawRectangle({
-    x: 12.0,
-    y: 290.0,
-    width: 83.6,
-    height: 21.5,
-    color: levelGray,
-  });
-  pages[0].drawText('VOCATIONAL /', {
-    x: 21.95,
-    y: 303.8,
-    size: 5.5,
-    font,
-    color: rgb(0, 0, 0),
-  });
-  pages[0].drawText('TRADE COURSE', {
-    x: 21.95,
-    y: 296.5,
-    size: 5.5,
-    font,
-    color: rgb(0, 0, 0),
-  });
-
-  // Explicitly draw the cell borders to guarantee crisp, clean separation
-  // Line between VOCATIONAL and COLLEGE across the entire table
-  pages[0].drawLine({
-    start: { x: 11.36, y: 292.43 },
-    end: { x: 566.51, y: 292.43 },
-    thickness: 0.52,
-    color: rgb(0, 0, 0),
-  });
-  // Line between SECONDARY and VOCATIONAL
-  pages[0].drawLine({
-    start: { x: 11.36, y: 312.09 },
-    end: { x: 566.51, y: 312.09 },
-    thickness: 0.52,
-    color: rgb(0, 0, 0),
-  });
-  // Vertical line separating LEVEL column from NAME OF SCHOOL column
-  pages[0].drawLine({
-    start: { x: 96.15, y: 292.43 },
-    end: { x: 96.15, y: 312.09 },
-    thickness: 0.52,
-    color: rgb(0, 0, 0),
-  });
-
- const qPositions=[[383,443.6,63],[383,443.6,76.1],[382.1,444.6,120.6],[382.1,446.5,162],[381.6,448.3,213.6],[381.2,448.3,253.5],[382.1,463.2,288],[383,464.1,312.7],[382.1,463.2,342.4],[382.1,464.1,411.9],[382.1,464.1,432.7],[382.1,464.1,455.1]];
- const detailY=[91,101,139,180,231,268,302,327,359,424,446,468];
- questions.forEach((q,i)=>{const answer=v[q.key];if(answer==='Yes'||answer==='No')tick(pages[3],qPositions[i][answer==='Yes'?0:1],qPositions[i][2]);if(answer==='Yes'&&v[q.key+'Details'])draw(q.key+'Details',v[q.key+'Details'],{page:3,x:443,y:detailY[i]-5,w:115,h:9})});
- if(v.caseDate)draw('caseDate',displayDate(v.caseDate),{page:3,x:469,y:182,w:90,h:10});if(v.caseStatus)draw('caseStatus',v.caseStatus,{page:3,x:444,y:195,w:116,h:10});
+ if(v.citizenshipCountry)draw('citizenshipCountry',v.citizenshipCountry,box('citizenshipCountry'));
+ if(v.civilStatus==='Other'&&v.civilOther)draw('civilOther',v.civilOther,box('civilOther'));
+  const qPositions=calibration.questionTicks;
+ const detailY=calibration.questionDetailY;
+ // Each question's "If YES, give details:" area is two printed writing lines, so the answer is
+ // given a two-line box that sits on those lines instead of a cramped single line above them.
+ questions.forEach((q,i)=>{const answer=v[q.key];if(answer==='Yes'||answer==='No')tick(pages[3],qPositions[i][answer==='Yes'?0:1],qPositions[i][2]);if(answer==='Yes'&&v[q.key+'Details'])draw(q.key+'Details',v[q.key+'Details'],{page:3,x:368,y:detailY[i]+5,w:150,h:15.5})});
+ if(v.caseDate)draw('caseDate',displayDate(v.caseDate),box('caseDate'));if(v.caseStatus)draw('caseStatus',v.caseStatus,box('caseStatus'));
  
-  // Exact signature and date boxes from official CSC CS Form 212 (Revised 2026) vector grid
-  // Cell bounds:
-  // Page 1 (index 0): data cell between x: 96.17 and 360.87, y_top: 763.16 to 782.30 (h: 19.15)
-  // Page 2 (index 1): data cell between x: 90.93 and 282.68, y_top: 766.69 to 787.22 (h: 20.54)
-  // Page 3 (index 2): data cell between x: 137.99 and 346.14, y_top: 751.95 to 770.49 (h: 18.54)
-  // Page 4 (index 3): box between x: 236.23 and 442.67, y_top: 630.00 to 674.00 (h: 44.00)
-  const signBoxes = [
-    { page: 0, x: 98, y: 764.5, w: 260, h: 16.5 },
-    { page: 1, x: 93, y: 768.0, w: 186, h: 17.5 },
-    { page: 2, x: 140, y: 753.5, w: 203, h: 15.5 },
-    { page: 3, x: 238, y: 630.0, w: 202, h: 44.0 },
-  ];
-  const dateBoxes = [
-    { page: 0, x: 432, y: 764.5, w: 132, h: 16.5 },
-    { page: 1, x: 356, y: 768.0, w: 218, h: 17.5 },
-    { page: 2, x: 441, y: 753.5, w: 130, h: 15.5 },
-    { page: 3, x: 238, y: 684.8, w: 202, h: 7.8 },  // Page 4: Date Accomplished cell strictly between y: 685.08 and 693.15
-  ];
+  // Signature, date and photo cells, measured from the printed rules of the official blank
+  // itself — each cell's own four rules — so a mark lands inside the very cell the form
+  // reserves for it, on every page:
+  //   page 1  signature x 133.35..366.21 · date x 426.63..551.13 · row y 798.88..818.56
+  //   page 2  signature x 132.63..314.14 · date x 386.24..541.78 · row y 757.88..776.73
+  //   page 3  signature x 171.38..349.84 · date x 436.39..571.79 · row y 804.99..825.50
+  //   page 4  signature x 242.51..424.49 y 658.57..707.73 · date y 717.32..725.72
+  //   page 4  photo     x 448.49..528.47 y 523.50..619.47
+  const signBoxes = calibration.signatureBoxes.map(rectBox);
+  const dateBoxes = calibration.dateBoxes.map(rectBox);
+  const PHOTO_BOX:Box={page:3,x:448.49,y:523.5,w:79.98,h:95.97};
 
   // 1. Signature Date on Pages 1-3: ONLY if user set up signature and checked date toggle
   if (effectiveData.signatureDate) {
@@ -260,46 +236,39 @@ export async function generatePDF(data:PDS,provided?:{template:Uint8Array;font?:
   }
 
   // 3. Photo & Signatures
-  for(const [key,boxes] of [['photo',[{page:3,x:476,y:498,w:74,h:95}]],['signature',signBoxes]] as const){
+  for(const [key,boxes] of [['photo',[PHOTO_BOX]],['signature',signBoxes]] as const){
     const image=effectiveData[key as 'photo' | 'signature'];if(!image)continue;
-    const isPng=image.startsWith('data:image/png');
-    const embedded=isPng?await pdf.embedPng(image):await pdf.embedJpg(image);
+    const embedded=image.startsWith('data:image/png')
+      ? await pdf.embedPng(image).catch(()=>null)
+      : await pdf.embedJpg(image).catch(()=>null);
+    if(!embedded)continue;
     for(const box of boxes){
+      const page=pages[box.page];
+      const floorY=page.getHeight()-box.y-box.h;
       if(key==='signature'){
-        // Mask the red template placeholder inside the cell using pure white
-        // All 4 signature cells are white in official CSC CS Form 212 template
-        // Padding preserves outer border lines and adjacent DATE headers cleanly
-        pages[box.page].drawRectangle({
-          x: box.x + 1,
-          y: pages[box.page].getHeight() - box.y - box.h + 1,
-          width: box.w - 2,
-          height: box.h - 2,
-          color: rgb(1, 1, 1),
-        });
+        // Every signature cell prints its red e-signature caption inside the cell itself, so
+        // the cell is cleared first. The 0.7pt inset keeps the printed rules around it.
+        page.drawRectangle({x:box.x+0.7,y:floorY+0.7,width:box.w-1.4,height:box.h-1.4,color:rgb(1,1,1)});
       }
-      // Auto-scale signature prominently so it fills the signature area gracefully, ink is bold, and never crosses borders
-      let scale: number;
-      if (key === 'signature') {
-        const targetW = box.page === 3 ? Math.min(box.w - 16, 180) : Math.min(box.w - 20, 105);
-        const targetH = box.page === 3 ? 38 : Math.min(box.h - 3.5, 12.0);
-        scale = Math.min(targetW / embedded.width, targetH / embedded.height);
-      } else {
-        scale = Math.min(box.w / embedded.width, box.h / embedded.height);
-      }
+      // A signature sits inside its cell with breathing room above and below; the photo is
+      // scaled to cover its frame and clipped to it, so no white gap is left at any edge
+      // whatever aspect ratio the uploaded picture happens to have.
+      const cover=key==='photo';
+      const scale=cover
+        ? Math.max(box.w/embedded.width,box.h/embedded.height)
+        : Math.min((box.w*0.5)/embedded.width,(box.h*0.72)/embedded.height);
       const w=embedded.width*scale,h=embedded.height*scale;
-      // On Pages 0-2 (Pages 1-3 of doc), center with slight upward offset so long descending loops (e.g. S, g, y) never touch bottom border
-      const offsetY = box.page === 3 ? (box.h - h) / 2 : (box.h - h) / 2 + 1.2;
-      pages[box.page].drawImage(embedded,{
-        x:box.x+(box.w-w)/2,
-        y:pages[box.page].getHeight()-box.y-box.h+offsetY,
-        width:w,
-        height:h
-      });
+      if(cover){
+        page.pushOperators(pushGraphicsState(),moveTo(box.x,floorY),lineTo(box.x+box.w,floorY),lineTo(box.x+box.w,floorY+box.h),lineTo(box.x,floorY+box.h),closePath(),clip(),endPath());
+      }
+      page.drawImage(embedded,{x:box.x+(box.w-w)/2,y:floorY+(box.h-h)/2,width:w,height:h});
+      if(cover)page.pushOperators(popGraphicsState());
     }
   }
  for(const [key,t] of Object.entries(tables))data.records[key]?.slice(t.capacity).forEach((r,i)=>overflow.push({label:`${t.label} — additional record ${t.capacity+i+1}`,value:t.columns.map(c=>`${c.label}: ${displayDate(r[c.key]||'N/A')}`).join('\n')}));
  // Supplemental text avoids clipping, omission or shrinking content to illegibility.
- if(overflow.length){let page=pdf.addPage([576,1008]),y=70;const heading=()=>{page.drawText('PERSONAL DATA SHEET — ADDITIONAL INFORMATION',{x:30,y:967,size:11,font});page.drawText([v.firstName,v.surname].filter(Boolean).join(' '),{x:30,y:947,size:9,font})};heading();for(let i=0;i<overflow.length;i++){const item=overflow[i];const lines=wrap(`${i+1}. ${item.label}\n${item.value}`,font,9,516);for(const line of lines){if(y>947){page=pdf.addPage([576,1008]);y=70;heading()}page.drawText(line,{x:30,y:1008-y,size:9,font});y+=13}y+=15}}
+ const {width:PW,height:PH}=calibration.page;
+ if(overflow.length){let page=pdf.addPage([PW,PH]),y=70;const top=PH-41;const heading=()=>{page.drawText('PERSONAL DATA SHEET — ADDITIONAL INFORMATION',{x:30,y:top,size:11,font});page.drawText([v.firstName,v.surname].filter(Boolean).join(' '),{x:30,y:top-20,size:9,font})};heading();const margin=30;for(let i=0;i<overflow.length;i++){const item=overflow[i];const lines=wrap(`${i+1}. ${item.label}\n${item.value}`,font,9,PW-2*margin);for(const line of lines){if(y>PH-61){page=pdf.addPage([PW,PH]);y=70;heading()}page.drawText(line,{x:margin,y:PH-y,size:9,font});y+=13}y+=15}}
  // A private machine-readable attachment enables lossless import of this app's PDFs.
  await pdf.attach(JSON.stringify(data),'zeticuz-pds.json',{mimeType:'application/json',description:'Editable Personal Data Sheet data'});
  pdf.setTitle('Personal Data Sheet — CS Form 212 Revised 2026');pdf.setAuthor('');pdf.setSubject('Applicant-completed CSC Personal Data Sheet');pdf.setCreator('Zeticuz PDS Builder');

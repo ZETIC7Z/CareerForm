@@ -13,7 +13,8 @@ interface CarouselItem {
   image: string;
   link: string;
   linkText: string;
-  isPdsLive?: boolean;
+  chipTop?: string;
+  chipBottom?: string;
 }
 
 const CAROUSEL_ITEMS: CarouselItem[] = [
@@ -21,35 +22,50 @@ const CAROUSEL_ITEMS: CarouselItem[] = [
     id: 'pds-mirror',
     title: 'Civil Service Form 212',
     subtitle: 'Official Revised 2026 Live Mirror',
-    badge: 'LIVE MIRROR',
-    image: '/template-preview.png',
+    badge: 'OFFICIAL CS FORM 212',
+    image: '/images/pds-poster.jpg',
     link: '/builder',
     linkText: 'Launch Live PDS',
-    isPdsLive: true,
+    chipTop: 'Official Revised 2026 CS Form 212',
+    chipBottom: 'Exports print-ready official A4 PDF',
   },
   {
     id: 'cover-letter',
     title: 'Executive Cover Letter',
     subtitle: 'Civil Service & Work Placement Intent',
-    badge: 'SMART WRITER',
-    image: '/images/cover-letter-poster.svg',
-    link: '/builder?tool=letter',
+    badge: 'APPLICATION LETTER',
+    image: '/images/cover-letter-poster.jpg',
+    link: '/coverletter',
     linkText: 'Compose Letter',
+    chipTop: 'CSC Compliant Application Letter',
+    chipBottom: 'To The Appointing Authority',
+  },
+  {
+    id: 'wes-annex',
+    title: 'CSC Work Experience Sheet',
+    subtitle: 'Standardized Annex to CS Form 212',
+    badge: 'WES BUILDER',
+    image: '/images/wes-poster.jpg',
+    link: '/wes',
+    linkText: 'Open WES Annex',
+    chipTop: 'CSC MC No. 16, s. 2017 Format',
+    chipBottom: 'Career Milestones & Duty Matrix',
   },
   {
     id: 'gov-jobs',
-    title: 'Gov Job Portal & WES Annex',
-    subtitle: 'Plantilla Vacancies & Experience Tracking',
+    title: 'Gov Job Portal & Careers',
+    subtitle: 'Plantilla Vacancies & Live Hiring',
     badge: 'CSC PLANTILLA',
-    image: '/images/job-application-poster.svg',
+    image: '/images/job-application-poster.jpg',
     link: '/jobs',
     linkText: 'Explore Vacancies',
+    chipTop: '3,400+ Verified Plantilla Jobs',
+    chipBottom: 'Instant Auto-Match with PDS',
   },
 ];
 
 export default function HeroShowcaseCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const total = CAROUSEL_ITEMS.length;
 
@@ -62,14 +78,7 @@ export default function HeroShowcaseCarousel() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Auto-play interval (4 seconds per CodePen PwWMZPv)
-  useEffect(() => {
-    if (isHovered) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % total);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [isHovered, total]);
+  // The launcher stays still: the visitor picks a card, nothing rotates on its own.
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % total);
@@ -82,12 +91,10 @@ export default function HeroShowcaseCarousel() {
   return (
     <div
       className="hero-carousel-wrapper"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       style={{
         position: 'relative',
         width: '100%',
-        maxWidth: '560px',
+        maxWidth: '660px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -135,18 +142,25 @@ export default function HeroShowcaseCarousel() {
               zIndex = 10;
             } else if (relativeIndex === 1) {
               // Second card (behind and to the left)
-              xOffset = isMobile ? -75 : -170;
-              zOffset = isMobile ? -80 : -140;
+              xOffset = isMobile ? -65 : -140;
+              zOffset = isMobile ? -70 : -120;
               scale = isMobile ? 0.94 : 0.92;
-              opacity = 0.75;
-              zIndex = 5;
+              opacity = 0.85;
+              zIndex = 8;
             } else if (relativeIndex === 2) {
-              // Third card (furthest back and to the left)
-              xOffset = isMobile ? -145 : -320;
-              zOffset = isMobile ? -160 : -280;
+              // Third card
+              xOffset = isMobile ? -125 : -260;
+              zOffset = isMobile ? -140 : -230;
               scale = isMobile ? 0.88 : 0.84;
-              opacity = 0.35;
-              zIndex = 1;
+              opacity = 0.55;
+              zIndex = 5;
+            } else if (relativeIndex === 3) {
+              // Fourth card (furthest back)
+              xOffset = isMobile ? -175 : -360;
+              zOffset = isMobile ? -190 : -320;
+              scale = isMobile ? 0.82 : 0.76;
+              opacity = 0.25;
+              zIndex = 2;
             }
 
             const isFront = relativeIndex === 0;
@@ -225,7 +239,7 @@ export default function HeroShowcaseCarousel() {
                       fontWeight: 600,
                     }}
                   >
-                    0{index + 1} / 03
+                    0{index + 1} / 0{total}
                   </span>
                 </div>
 
@@ -243,106 +257,66 @@ export default function HeroShowcaseCarousel() {
                     boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.4)',
                   }}
                 >
-                  {item.isPdsLive ? (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        position: 'relative',
-                        display: 'flex',
-                        flexDirection: 'column',
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: '24px',
-                          background: 'rgba(0, 0, 0, 0.6)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '0 8px',
-                          gap: '4px',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                        }}
-                      >
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b' }} />
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-                        <span style={{ fontSize: '9px', color: '#94a3b8', marginLeft: '6px' }}>CS Form 212 (Rev. 2026)</span>
-                      </div>
-                      <div
-                        style={{
-                          position: 'relative',
-                          flex: 1,
-                          overflow: 'hidden',
-                          background: '#ffffff',
-                        }}
-                      >
-                        <Image
-                          src="/template-preview.png"
-                          alt="Official CS Form 212 Revised 2026 live sheet mirror"
-                          fill
-                          sizes="(max-width: 768px) 280px, 350px"
-                          style={{ objectFit: 'contain', objectPosition: 'top' }}
-                          priority={index === 0}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      fill
-                      sizes="(max-width: 768px) 280px, 350px"
-                      style={{ objectFit: 'cover', objectPosition: 'top' }}
-                      priority={index === 0}
-                    />
-                  )}
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    sizes="(max-width: 768px) 300px, 420px"
+                    style={{ objectFit: 'cover', objectPosition: 'top' }}
+                    priority={index === 0}
+                  />
 
                   {/* Overlaid Floating Chips on Active Front Card */}
-                  {isFront && item.isPdsLive && (
+                  {isFront && (
                     <>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '32px',
-                          left: '8px',
-                          background: 'rgba(15, 23, 42, 0.9)',
-                          border: '1px solid rgba(56, 189, 248, 0.3)',
-                          borderRadius: '999px',
-                          padding: '3px 8px',
-                          fontSize: '9.5px',
-                          fontWeight: 600,
-                          color: '#f8fafc',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-                        }}
-                      >
-                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#38bdf8' }} />
-                        Live mirror updates as you type
-                      </div>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          bottom: '10px',
-                          right: '8px',
-                          background: 'rgba(15, 23, 42, 0.9)',
-                          border: '1px solid rgba(16, 185, 129, 0.3)',
-                          borderRadius: '999px',
-                          padding: '3px 8px',
-                          fontSize: '9.5px',
-                          fontWeight: 600,
-                          color: '#f8fafc',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-                        }}
-                      >
-                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
-                        Exports print-ready 8 × 14 in PDF
-                      </div>
+                      {item.chipTop && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '12px',
+                            left: '10px',
+                            background: 'rgba(15, 23, 42, 0.92)',
+                            border: '1px solid rgba(56, 189, 248, 0.35)',
+                            borderRadius: '999px',
+                            padding: '4px 10px',
+                            fontSize: '9.5px',
+                            fontWeight: 700,
+                            color: '#f8fafc',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.5)',
+                            backdropFilter: 'blur(8px)',
+                          }}
+                        >
+                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#38bdf8' }} />
+                          {item.chipTop}
+                        </div>
+                      )}
+                      {item.chipBottom && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            right: '10px',
+                            background: 'rgba(15, 23, 42, 0.92)',
+                            border: '1px solid rgba(16, 185, 129, 0.35)',
+                            borderRadius: '999px',
+                            padding: '4px 10px',
+                            fontSize: '9.5px',
+                            fontWeight: 700,
+                            color: '#f8fafc',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.5)',
+                            backdropFilter: 'blur(8px)',
+                          }}
+                        >
+                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
+                          {item.chipBottom}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
