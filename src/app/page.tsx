@@ -86,11 +86,14 @@ export default function Home(){
     <section className="hero" style={{ position: 'relative', overflow: 'hidden', isolation: 'isolate', zIndex: 1 }}>
       <div className="hero-bg" aria-hidden/>
 
-      {/* Hero Top-Right Tip Jar */}
+      {/* Hero Top-Right Tip Jar. The hero now starts at the very top of the page (its
+          background runs behind the fixed nav), so this offset has to clear the nav the
+          same way every other page's content does, or the pill lands on top of the
+          Sign in / Sign up controls. */}
       <div
         style={{
           position: 'absolute',
-          top: '32px',
+          top: 'calc(var(--site-nav-h, 132px) + 32px)',
           right: '36px',
           zIndex: 25,
         }}

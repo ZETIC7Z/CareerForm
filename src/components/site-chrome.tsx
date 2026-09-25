@@ -90,7 +90,7 @@ export default function SiteChrome({children}:{children:React.ReactNode}){
       }}/>
       <div className="site-footer-in">
         <div>
-          <Link className="site-brand-link footer-brand-link" href="/" aria-label="CareerForm PH home"><BrandMark height={42}/></Link>
+          <Link className="site-brand-link footer-brand-link" href="/" aria-label="CareerForm PH home"><BrandMark height={46}/></Link>
           <p>Free, private, in-browser tools for Filipino government job applicants. Your details never leave this device.</p>
           <div className="footer-socials">
             {SOCIAL_ICONS.map(({label,href,Icon})=><a key={label} href={href} aria-label={label} title={label} target={href.startsWith('http')?'_blank':undefined} rel={href.startsWith('http')?'noopener noreferrer':undefined}><Icon size={17}/></a>)}

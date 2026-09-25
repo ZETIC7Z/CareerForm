@@ -5,22 +5,63 @@ import SiteChrome from '@/components/site-chrome';
 // System font stacks — no external fetch needed, builds work offline
 const fontVarsClass = 'font-vars-applied';
 
+/**
+ * The absolute origin every share/SEO URL is built from. Canonical URLs and the
+ * Open Graph/Twitter images below resolve against it — change it here (or point
+ * NEXT_PUBLIC_SITE_URL at the deployed domain) and every tag follows.
+ */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://careerform-ph.vercel.app';
+
 export const metadata:Metadata={
+  // Prefixes every relative URL in this metadata so OG/Twitter cards carry absolute
+  // image URLs — the requirement social scrapers enforce before they render a preview.
+  metadataBase:new URL(SITE_URL),
   title:{default:'CareerForm PH — Free CSC PDS Builder (Revised 2026)',template:'%s · CareerForm PH'},
   description:'Build your Civil Service Personal Data Sheet (CS Form 212, Revised 2026) free, in your browser. Live official-form preview, smart import, application letters — no sign-up, nothing uploaded.',
-  keywords:['PDS','Personal Data Sheet','CS Form 212','Revised 2026','CSC','Civil Service Commission','Philippines','government jobs','resume builder'],
+  keywords:['PDS','Personal Data Sheet','CS Form 212','Revised 2026','CSC','Civil Service Commission','Philippines','government jobs','plantilla','job application','resume builder'],
   authors:[{name:'Sam Pangilinan',url:'https://www.zeticuz.xyz'}],
   creator:'Sam Pangilinan (ZETICUZ)',
-  openGraph:{title:'CareerForm PH — Free CSC PDS Builder (Revised 2026)',description:'Fill the official 2026 Personal Data Sheet with a live preview. Free, private, entirely in your browser.',type:'website',locale:'en_PH',siteName:'CareerForm PH'},
+  category:'technology',
+  // Google Search Console ownership verification (Search Console → URL prefix → HTML tag).
+  verification:{google:'qQpKzJpPBnwHL9L9Q9wDJ9-oS9xyplfYR3alueF5lNw'},
+  alternates:{canonical:'/'},
+  openGraph:{
+    title:'CareerForm PH — Free CSC PDS Builder (Revised 2026)',
+    description:'Fill the official 2026 Personal Data Sheet with a live preview. Free, private, entirely in your browser.',
+    url:'/',
+    siteName:'CareerForm PH',
+    type:'website',
+    locale:'en_PH',
+    images:[{url:'/images/og-cover.jpg',width:1200,height:630,alt:'CareerForm PH — the official CS Form 212 mirrored live as you type'}],
+  },
+  twitter:{
+    card:'summary_large_image',
+    title:'CareerForm PH — Free CSC PDS Builder (Revised 2026)',
+    description:'Fill the official 2026 Personal Data Sheet with a live preview. Free, private, entirely in your browser.',
+    images:['/images/og-cover.jpg'],
+  },
+  // Everything public is crawlable; auth/API surfaces are deliberately excluded in
+  // robots.txt. These tags state the intent in-band for well-behaved crawlers too.
+  robots:{
+    index:true,
+    follow:true,
+    googleBot:{
+      index:true,
+      follow:true,
+      'max-video-preview':-1,
+      'max-image-preview':'large',
+      'max-snippet':-1,
+    },
+  },
   // Browser-tab icon. The .ico is first because Chrome, Edge and the Windows shell look
-  // for /favicon.ico before anything else — it is generated from the same mark by
-  // `node scripts/make-favicon.mjs`, so every path shows the CareerForm logo and never
+  // for /favicon.ico before anything else — it is generated from the same emblem by
+  // `node scripts/make-favicon.mjs`, so every path shows the CareerForm mark and never
   // the framework's default artwork. The PNG covers browsers that prefer it, and the
   // 180px square is what iOS puts on a home screen.
   icons:{
     icon:[
       {url:'/favicon.ico',sizes:'any'},
-      {url:'/icon.png',type:'image/png',sizes:'568x508'},
+      {url:'/icon.png',type:'image/png',sizes:'512x512'},
     ],
     apple:[{url:'/apple-icon.png',type:'image/png',sizes:'180x180'}],
   },

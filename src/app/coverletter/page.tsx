@@ -298,7 +298,7 @@ ${senderContact}`;
             <ArrowLeft size={17} />
           </Link>
           <Link className="wc-brand" href="/" aria-label="CareerForm PH home">
-            <BrandMark height={34}/>
+            <BrandMark height={26}/>
           </Link>
 
           {/* Letter Type Switcher */}

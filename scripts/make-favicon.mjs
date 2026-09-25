@@ -1,17 +1,18 @@
 /**
- * Build the browser-tab icon set from the CareerForm logo.
+ * Build the browser-tab icon set from the CareerForm icon.
  *
  *   node scripts/make-favicon.mjs [source.png]
  *
  * Why this exists: `src/app/favicon.ico` shipped as the untouched Next.js starter file,
  * whose artwork is the Vercel triangle. Browsers request that path first, so the tab
  * showed Vercel's mark on top of CareerForm. Replacing it needs a real multi-resolution
- * .ico, and the project has no image tooling (no sharp, no ImageMagick), so the decode,
- * the alpha-aware downscale and the ICO container are all done here with Node's own zlib.
+ * .ico, and the project deliberately keeps no image dependency (sharp is only present as
+ * a transitive Next.js optional), so the decode, the alpha-aware downscale and the ICO
+ * container are all done here with Node's own zlib.
  *
  * Outputs:
  *   src/app/favicon.ico     16 / 32 / 48 / 256 px entries
- *   src/app/icon.png        the full-size mark Next serves at /icon.png
+ *   src/app/icon.png        512 px square, served at /icon.png
  *   src/app/apple-icon.png  180 px square for iOS home screens
  */
 import fs from 'node:fs';
@@ -171,12 +172,77 @@ function alphaBounds({ width, height, rgba }) {
 }
 
 /**
- * Box-filter downscale on premultiplied colour.
+ * Premultiplied pixel read, clamped to the source edges.
  *
  * Averaging straight RGBA pulls the colour of fully transparent pixels into the edges and
- * leaves a dark halo around the mark at 16 px; weighting by alpha first avoids it.
+ * leaves a dark halo around the mark at 16 px; weighting by alpha first avoids it, so every
+ * sampling path in here works on alpha-weighted colour.
  */
+function tap(src, sx, sy, weight) {
+  const px = Math.min(src.width - 1, Math.max(0, sx));
+  const py = Math.min(src.height - 1, Math.max(0, sy));
+  const i = (py * src.width + px) * 4;
+  const alpha = (src.rgba[i + 3] / 255) * weight;
+  return {
+    r: src.rgba[i] * alpha,
+    g: src.rgba[i + 1] * alpha,
+    b: src.rgba[i + 2] * alpha,
+    a: src.rgba[i + 3] * weight,
+  };
+}
+
+/**
+ * Bilinear upscale on premultiplied colour.
+ *
+ * The source artwork for a browser icon is often smaller than the largest entry in the .ico
+ * (and smaller than the 512 px PNG), and the box filter below degrades to nearest-neighbour
+ * when it has to grow an image — which reads as a blocky blob on a Windows tile. Interpolating
+ * instead keeps the smooth, slightly soft look the downsizes already have.
+ */
+function upscale(src, size, crop) {
+  const out = Buffer.alloc(size * size * 4);
+  const step = crop.size / size;
+  for (let y = 0; y < size; y += 1) {
+    const fy = crop.y + (y + 0.5) * step - 0.5;
+    const y0 = Math.floor(fy);
+    const ty = fy - y0;
+    for (let x = 0; x < size; x += 1) {
+      const fx = crop.x + (x + 0.5) * step - 0.5;
+      const x0 = Math.floor(fx);
+      const tx = fx - x0;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      const taps = [
+        [x0, y0, (1 - tx) * (1 - ty)],
+        [x0 + 1, y0, tx * (1 - ty)],
+        [x0, y0 + 1, (1 - tx) * ty],
+        [x0 + 1, y0 + 1, tx * ty],
+      ];
+      for (const [sx, sy, weight] of taps) {
+        if (weight <= 0) continue;
+        const px = tap(src, sx, sy, weight);
+        r += px.r;
+        g += px.g;
+        b += px.b;
+        a += px.a;
+      }
+      const d = (y * size + x) * 4;
+      const alphaSum = a / 255;
+      out[d] = alphaSum ? Math.round(r / alphaSum) : 0;
+      out[d + 1] = alphaSum ? Math.round(g / alphaSum) : 0;
+      out[d + 2] = alphaSum ? Math.round(b / alphaSum) : 0;
+      out[d + 3] = Math.min(255, Math.round(a));
+    }
+  }
+  return out;
+}
+
+/** Box-filter resample. Downsamples for every size a tab icon needs; delegates to
+ * `upscale` when the requested entry is larger than the artwork it has to fill. */
 function resize(src, size, crop) {
+  if (crop.size < size) return upscale(src, size, crop);
   const out = Buffer.alloc(size * size * 4);
   const step = crop.size / size;
   for (let y = 0; y < size; y += 1) {
@@ -192,14 +258,11 @@ function resize(src, size, crop) {
       let n = 0;
       for (let sy = Math.floor(y0); sy < Math.ceil(y1); sy += 1) {
         for (let sx = Math.floor(x0); sx < Math.ceil(x1); sx += 1) {
-          const px = Math.min(src.width - 1, Math.max(0, sx));
-          const py = Math.min(src.height - 1, Math.max(0, sy));
-          const i = (py * src.width + px) * 4;
-          const alpha = src.rgba[i + 3] / 255;
-          r += src.rgba[i] * alpha;
-          g += src.rgba[i + 1] * alpha;
-          b += src.rgba[i + 2] * alpha;
-          a += src.rgba[i + 3];
+          const px = tap(src, sx, sy, 1);
+          r += px.r;
+          g += px.g;
+          b += px.b;
+          a += px.a;
           n += 1;
         }
       }
@@ -254,10 +317,12 @@ const sizes = [16, 32, 48, 256];
 const ico = buildIco(sizes.map(size => ({ size, png: at(size) })));
 
 fs.writeFileSync(path.join('src/app/favicon.ico'), ico);
+fs.writeFileSync(path.join('src/app/icon.png'), encodePng(512, 512, resize(source, 512, crop)));
 fs.writeFileSync(path.join('src/app/apple-icon.png'), encodePng(180, 180, resize(source, 180, crop)));
 
 console.log(`source      ${SOURCE} — ${source.width}x${source.height}, content box ${crop.size}px at (${crop.x}, ${crop.y})`);
 console.log(`favicon.ico ${ico.length} bytes (${sizes.join(', ')} px)`);
+console.log('icon.png 512x512');
 console.log('apple-icon.png 180x180');
 
 // Self-check: read every entry back out of the finished file and confirm each one is a

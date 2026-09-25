@@ -126,14 +126,20 @@ export default function GlassNavigation() {
                 longer spells the name out in type beside it. The height is deliberately
                 constant: the bar may tighten on scroll, but the logo itself stays locked
                 at the same size and the same place rather than animating under the
-                reader's eyes. */}
+                reader's eyes. BrandMark's default size is a viewport-driven clamp, so the
+                mark reads large on a desktop without crowding the links at 1024px. */}
             <Link href="/" className="flex items-center group shrink-0" aria-label="CareerForm PH home">
-              <BrandMark height={40} priority />
+              <BrandMark priority />
             </Link>
 
             {/* Desktop Navigation Links — never break a label across two lines, and the
-                spacing tightens before the row would ever squeeze the marks together. */}
-            <div className="hidden md:flex items-center gap-3 lg:gap-4 xl:gap-7">
+                spacing tightens before the row would ever squeeze the marks together.
+                The whole desktop cluster starts at `lg`, not `md`: between 768 and ~960px
+                the links, the logo and the account controls together measure wider than the
+                bar, and the row used to spill off the right edge with Sign in / Sign up
+                half off screen. Tablets now get the full-screen menu the phones already
+                use, which fits them better anyway. */}
+            <div className="hidden lg:flex items-center gap-3 lg:gap-4 xl:gap-7">
               {dynamicNavLinks.map(link => (
                 <Link
                   key={link.name}
@@ -155,7 +161,7 @@ export default function GlassNavigation() {
             </div>
 
             {/* Desktop CTAs, Theme Picker & Auth */}
-            <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
+            <div className="hidden lg:flex items-center gap-2 lg:gap-3 shrink-0">
               {/* The accent picker is a preference, not navigation — below xl it moves into
                   the mobile menu so a wide logo and the account controls always fit. */}
               <span className="hidden xl:inline-flex">
@@ -210,7 +216,7 @@ export default function GlassNavigation() {
             </div>
 
             {/* Mobile Menu Toggle Button & Theme Picker */}
-            <div className="md:hidden flex items-center gap-2">
+            <div className="lg:hidden flex items-center gap-2">
               <ThemeAccentPicker />
               <ThemeToggle />
               <button
@@ -226,7 +232,7 @@ export default function GlassNavigation() {
 
         {/* Mobile Full-Screen Glass Overlay */}
         <div
-          className={`md:hidden fixed inset-0 z-40 transition-all duration-500 ${
+          className={`lg:hidden fixed inset-0 z-40 transition-all duration-500 ${
             isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           style={{ top: 0, backgroundColor: 'var(--bg)', backdropFilter: 'blur(24px)' }}

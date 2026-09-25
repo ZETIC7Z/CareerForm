@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 896 1200" width="896" height="1200" role="img" aria-label="CSC Plantilla government career portal preview">
+  <!--
+    The "CSC Plantilla" slide of the hero showcase (src/components/hero-showcase-carousel.tsx).
+
+    This replaces the AI-generated render that stood here: that picture had drifted into
+    unreadable, overlapping lettering ("REER PORTAL" over a job list, agency names cut in
+    half), which is the one failure mode a mockup full of text must not have. Drawing it as
+    vector keeps every word legible at the size the card actually shows, and this file is now
+    the source of the .jpg beside it (regenerate after any SVG edit):
+
+        node -e "require('sharp')('public/images/csc-plantilla-poster.svg') \
+          .resize(896,1200).jpeg({quality:92}).toFile('public/images/csc-plantilla-poster.jpg')"
+
+    Only the top ~780 units survive the card's `object-fit: cover` crop, so the vacancy list
+    is laid out to finish before then and the tail is decoration.
+  -->
+  <defs>
+    <linearGradient id="cp-bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#071026"/>
+      <stop offset="55%" stop-color="#0a1730"/>
+      <stop offset="100%" stop-color="#03070f"/>
+    </linearGradient>
+    <radialGradient id="cp-glow" cx="78%" cy="4%" r="72%">
+      <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.34"/>
+      <stop offset="55%" stop-color="#0ea5e9" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cp-gold" cx="8%" cy="2%" r="60%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cp-cyan" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="cp-row" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#111f38" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0b1628" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="cp-rail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <filter id="cp-drop" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect width="896" height="1200" fill="url(#cp-bg2)"/>
+  <rect width="896" height="1200" fill="url(#cp-glow)"/>
+  <rect width="896" height="1200" fill="url(#cp-gold)"/>
+
+  <!-- faint blueprint grid -->
+  <g stroke="#ffffff" stroke-opacity="0.035" stroke-width="1">
+    <line x1="0" y1="150" x2="896" y2="150"/>
+    <line x1="0" y1="300" x2="896" y2="300"/>
+    <line x1="0" y1="450" x2="896" y2="450"/>
+    <line x1="0" y1="600" x2="896" y2="600"/>
+    <line x1="0" y1="750" x2="896" y2="750"/>
+    <line x1="0" y1="900" x2="896" y2="900"/>
+    <line x1="0" y1="1050" x2="896" y2="1050"/>
+    <line x1="112" y1="0" x2="112" y2="1200"/>
+    <line x1="224" y1="0" x2="224" y2="1200"/>
+    <line x1="336" y1="0" x2="336" y2="1200"/>
+    <line x1="448" y1="0" x2="448" y2="1200"/>
+    <line x1="560" y1="0" x2="560" y2="1200"/>
+    <line x1="672" y1="0" x2="672" y2="1200"/>
+    <line x1="784" y1="0" x2="784" y2="1200"/>
+  </g>
+
+  <!-- ============ masthead ============ -->
+  <g transform="translate(44, 44)">
+    <rect width="808" height="72" rx="18" fill="#0d1a30" stroke="#1e3a5f"/>
+    <rect x="18" y="18" width="36" height="36" rx="11" fill="url(#cp-cyan)"/>
+    <path d="M36 26 L41 36 L31 36 Z M31 40 L41 40 L41 45 L31 45 Z" fill="#ffffff"/>
+    <text x="68" y="35" font-family="Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#ffffff" letter-spacing="1.4">CSC PLANTILLA · GOVERNMENT CAREER PORTAL</text>
+    <text x="68" y="55" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" fill="#8fb3d9">National agencies · Regional offices · Plantilla items only</text>
+    <rect x="700" y="21" width="90" height="30" rx="15" fill="#052e26" stroke="#10b981"/>
+    <circle cx="717" cy="36" r="4" fill="#10b981"/>
+    <text x="746" y="41" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#34d399" text-anchor="middle">LIVE</text>
+  </g>
+
+  <!-- ============ headline + stats ============ -->
+  <g transform="translate(44, 140)">
+    <text x="0" y="0" font-family="Segoe UI, Arial, sans-serif" font-size="38" font-weight="800" fill="#ffffff" letter-spacing="-0.6">3,412 verified plantilla vacancies</text>
+    <text x="0" y="30" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#93b4d6">Open right now across 184 national agencies, bureaus and local offices.</text>
+
+    <g transform="translate(0, 58)">
+      <rect width="196" height="76" rx="16" fill="#0c1729" stroke="#1b3352"/>
+      <text x="18" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="23" font-weight="800" fill="#38bdf8">184</text>
+      <text x="18" y="53" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" fill="#8fb3d9">Hiring agencies</text>
+      <text x="18" y="69" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#5f81a8">Updated 02:50 AM</text>
+
+      <rect x="212" y="0" width="196" height="76" rx="16" fill="#0c1729" stroke="#1b3352"/>
+      <text x="230" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="23" font-weight="800" fill="#fbbf24">SG 4 – 33</text>
+      <text x="230" y="53" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" fill="#8fb3d9">Salary grade spread</text>
+      <text x="230" y="69" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#5f81a8">Entry level to executive</text>
+
+      <rect x="424" y="0" width="384" height="76" rx="16" fill="#071a2b" stroke="#1d4e6b"/>
+      <text x="444" y="31" font-family="Segoe UI, Arial, sans-serif" font-size="14.5" font-weight="700" fill="#7dd3fc">MATCHED TO YOUR PDS</text>
+      <text x="444" y="52" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" fill="#9ec4e2">Eligibility, education and experience checked</text>
+      <text x="444" y="69" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#5f81a8">Only items your CS Form 212 already qualifies for</text>
+    </g>
+  </g>
+
+  <!-- ============ vacancy rows ============ -->
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <!-- row 1 -->
+    <g transform="translate(44, 306)">
+      <rect width="808" height="100" rx="18" fill="url(#cp-row)" stroke="#1f3c5c" filter="url(#cp-drop)"/>
+      <rect x="0" y="16" width="4" height="68" rx="2" fill="url(#cp-rail)"/>
+      <text x="24" y="34" font-size="18" font-weight="700" fill="#ffffff">Administrative Officer IV</text>
+      <text x="24" y="55" font-size="12.5" fill="#93b4d6">Civil Service Commission · Central Office, Quezon City</text>
+      <text x="24" y="79" font-size="14.5" font-weight="700" fill="#34d399">₱74,426 / month</text>
+      <text x="166" y="79" font-size="12" fill="#7d9cbd">Permanent · Plantilla item</text>
+      <rect x="600" y="20" width="72" height="24" rx="12" fill="#082032" stroke="#2563eb"/>
+      <text x="636" y="36" font-size="11.5" font-weight="700" fill="#93c5fd" text-anchor="middle">SG-22</text>
+      <rect x="686" y="20" width="104" height="24" rx="12" fill="#052e26" stroke="#10b981"/>
+      <text x="738" y="36" font-size="11.5" font-weight="700" fill="#34d399" text-anchor="middle">98% MATCH</text>
+      <text x="600" y="79" font-size="12" fill="#7d9cbd">Closes 12 Oct 2026</text>
+      <circle cx="768" cy="72" r="17" fill="#0e7490"/>
+      <path d="M762 72 L775 72 M770 66 L776 72 L770 78" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- row 2 -->
+    <g transform="translate(44, 418)">
+      <rect width="808" height="100" rx="18" fill="url(#cp-row)" stroke="#1f3c5c"/>
+      <rect x="0" y="16" width="4" height="68" rx="2" fill="url(#cp-rail)"/>
+      <text x="24" y="34" font-size="18" font-weight="700" fill="#ffffff">Chief Administrative Officer</text>
+      <text x="24" y="55" font-size="12.5" fill="#93b4d6">Department of Budget and Management · Central Office</text>
+      <text x="24" y="79" font-size="14.5" font-weight="700" fill="#34d399">₱90,078 / month</text>
+      <text x="166" y="79" font-size="12" fill="#7d9cbd">Permanent · Plantilla item</text>
+      <rect x="600" y="20" width="72" height="24" rx="12" fill="#082032" stroke="#2563eb"/>
+      <text x="636" y="36" font-size="11.5" font-weight="700" fill="#93c5fd" text-anchor="middle">SG-24</text>
+      <rect x="686" y="20" width="104" height="24" rx="12" fill="#082032" stroke="#2563eb"/>
+      <text x="738" y="36" font-size="11.5" font-weight="700" fill="#93c5fd" text-anchor="middle">92% MATCH</text>
+      <text x="600" y="79" font-size="12" fill="#7d9cbd">Closes 20 Oct 2026</text>
+      <circle cx="768" cy="72" r="17" fill="#0e7490"/>
+      <path d="M762 72 L775 72 M770 66 L776 72 L770 78" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- row 3 -->
+    <g transform="translate(44, 530)">
+      <rect width="808" height="100" rx="18" fill="url(#cp-row)" stroke="#1f3c5c"/>
+      <rect x="0" y="16" width="4" height="68" rx="2" fill="url(#cp-rail)"/>
+      <text x="24" y="34" font-size="18" font-weight="700" fill="#ffffff">Attorney III</text>
+      <text x="24" y="55" font-size="12.5" fill="#93b4d6">Department of Justice · Office of the Secretary</text>
+      <text x="24" y="79" font-size="14.5" font-weight="700" fill="#34d399">₱68,415 / month</text>
+      <text x="166" y="79" font-size="12" fill="#7d9cbd">RA 1080 · Plantilla item</text>
+      <rect x="600" y="20" width="72" height="24" rx="12" fill="#082032" stroke="#2563eb"/>
+      <text x="636" y="36" font-size="11.5" font-weight="700" fill="#93c5fd" text-anchor="middle">SG-21</text>
+      <rect x="686" y="20" width="104" height="24" rx="12" fill="#3a2a06" stroke="#f59e0b"/>
+      <text x="738" y="36" font-size="11.5" font-weight="700" fill="#fbbf24" text-anchor="middle">REVIEW</text>
+      <text x="600" y="79" font-size="12" fill="#7d9cbd">Closes 27 Oct 2026</text>
+      <circle cx="768" cy="72" r="17" fill="#0e7490"/>
+      <path d="M762 72 L775 72 M770 66 L776 72 L770 78" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- row 4 -->
+    <g transform="translate(44, 642)">
+      <rect width="808" height="100" rx="18" fill="url(#cp-row)" stroke="#1f3c5c"/>
+      <rect x="0" y="16" width="4" height="68" rx="2" fill="url(#cp-rail)"/>
+      <text x="24" y="34" font-size="18" font-weight="700" fill="#ffffff">Senior Science Research Specialist</text>
+      <text x="24" y="55" font-size="12.5" fill="#93b4d6">DOST-ASTI · Information and Communications Division</text>
+      <text x="24" y="79" font-size="14.5" font-weight="700" fill="#34d399">₱51,357 / month</text>
+      <text x="166" y="79" font-size="12" fill="#7d9cbd">Permanent · Plantilla item</text>
+      <rect x="600" y="20" width="72" height="24" rx="12" fill="#082032" stroke="#2563eb"/>
+      <text x="636" y="36" font-size="11.5" font-weight="700" fill="#93c5fd" text-anchor="middle">SG-19</text>
+      <rect x="686" y="20" width="104" height="24" rx="12" fill="#052e26" stroke="#10b981"/>
+      <text x="738" y="36" font-size="11.5" font-weight="700" fill="#34d399" text-anchor="middle">88% MATCH</text>
+      <text x="600" y="79" font-size="12" fill="#7d9cbd">Closes 31 Oct 2026</text>
+      <circle cx="768" cy="72" r="17" fill="#0e7490"/>
+      <path d="M762 72 L775 72 M770 66 L776 72 L770 78" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- ============ closing band (mostly below the card crop) ============ -->
+  <g transform="translate(44, 800)">
+    <rect width="808" height="352" rx="22" fill="#081527" stroke="#1b3352"/>
+    <text x="34" y="52" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="800" fill="#ffffff">One application packet, every vacancy</text>
+    <text x="34" y="80" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#93b4d6">Your CS Form 212, Work Experience Sheet and application letter travel together.</text>
+
+    <g transform="translate(34, 112)">
+      <circle cx="9" cy="4" r="8" fill="#10b981"/>
+      <path d="M5 4 L8 7 L13 1" stroke="#03211a" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="30" y="9" font-family="Segoe UI, Arial, sans-serif" font-size="14.5" fill="#dbe7f4">Print-ready official A4 PDS, no watermark</text>
+    </g>
+    <g transform="translate(34, 152)">
+      <circle cx="9" cy="4" r="8" fill="#10b981"/>
+      <path d="M5 4 L8 7 L13 1" stroke="#03211a" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="30" y="9" font-family="Segoe UI, Arial, sans-serif" font-size="14.5" fill="#dbe7f4">Work Experience Sheet generated from your history</text>
+    </g>
+    <g transform="translate(34, 192)">
+      <circle cx="9" cy="4" r="8" fill="#10b981"/>
+      <path d="M5 4 L8 7 L13 1" stroke="#03211a" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="30" y="9" font-family="Segoe UI, Arial, sans-serif" font-size="14.5" fill="#dbe7f4">Application letter addressed to the appointing authority</text>
+    </g>
+
+    <rect x="34" y="230" width="740" height="56" rx="14" fill="url(#cp-cyan)"/>
+    <text x="404" y="265" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff" text-anchor="middle">Explore 3,412 plantilla vacancies →</text>
+  </g>
+</svg>

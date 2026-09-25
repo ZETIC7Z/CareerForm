@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="CareerForm PH — Free CSC PDS Builder">
+  <!--
+    Open Graph / Twitter card cover (1200x630 — the size every major platform renders).
+    Source for public/images/og-cover.jpg; regenerate after any edit:
+
+        node -e "require('sharp')('public/images/og-cover.svg').jpeg({quality:90}).toFile('public/images/og-cover.jpg')"
+
+    The dark field and glow language mirror the site, and the light wordmark artwork is
+    the version with the strongest contrast for feed thumbnails.
+  -->
+  <defs>
+    <linearGradient id="og-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#071026"/>
+      <stop offset="55%" stop-color="#0a1730"/>
+      <stop offset="100%" stop-color="#03070f"/>
+    </linearGradient>
+    <radialGradient id="og-glow1" cx="14%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="og-glow2" cx="88%" cy="10%" r="60%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="og-cyan" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#og-bg)"/>
+  <rect width="1200" height="630" fill="url(#og-glow1)"/>
+  <rect width="1200" height="630" fill="url(#og-glow2)"/>
+
+  <g stroke="#ffffff" stroke-opacity="0.04" stroke-width="1">
+    <line x1="0" y1="157" x2="1200" y2="157"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/>
+    <line x1="0" y1="472" x2="1200" y2="472"/>
+    <line x1="150" y1="0" x2="150" y2="630"/>
+    <line x1="300" y1="0" x2="300" y2="630"/>
+    <line x1="450" y1="0" x2="450" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="750" y1="0" x2="750" y2="630"/>
+    <line x1="900" y1="0" x2="900" y2="630"/>
+    <line x1="1050" y1="0" x2="1050" y2="630"/>
+  </g>
+
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <rect x="70" y="70" width="330" height="40" rx="20" fill="#082032" stroke="#2563eb"/>
+    <circle cx="94" cy="90" r="5" fill="#38bdf8"/>
+    <text x="110" y="96" font-size="17" font-weight="700" fill="#93c5fd" letter-spacing="2.2">OFFICIAL CS FORM 212</text>
+
+    <text x="70" y="205" font-size="64" font-weight="800" fill="#ffffff" letter-spacing="-1">Your Pathway to</text>
+    <text x="70" y="285" font-size="64" font-weight="800" fill="#ffffff" letter-spacing="-1">Civil Service Success</text>
+
+    <text x="70" y="345" font-size="24" fill="#93b4d6">The official CSC PDS (Revised 2026), mirrored live as you type.</text>
+    <text x="70" y="382" font-size="24" fill="#93b4d6">Free, private, entirely in your browser.</text>
+
+    <rect x="70" y="450" width="430" height="64" rx="14" fill="url(#og-cyan)"/>
+    <text x="285" y="491" font-size="24" font-weight="700" fill="#ffffff" text-anchor="middle">careerform-ph.vercel.app</text>
+
+    <g transform="translate(560, 448)">
+      <circle cx="16" cy="32" r="13" fill="#10b981"/>
+      <path d="M10 32 L14 36 L22 26" stroke="#03211a" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="44" y="40" font-size="22" font-weight="600" fill="#dbe7f4">Print-ready official A4 export</text>
+    </g>
+    <g transform="translate(560, 384)">
+      <circle cx="16" cy="32" r="13" fill="#10b981"/>
+      <path d="M10 32 L14 36 L22 26" stroke="#03211a" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="44" y="40" font-size="22" font-weight="600" fill="#dbe7f4">Letters that fill themselves in</text>
+    </g>
+  </g>
+</svg>

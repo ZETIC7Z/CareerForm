@@ -73,7 +73,7 @@ export default function ResetPasswordPage() {
     <div className="reset-shell">
       <div className="reset-card">
         <Link href="/" className="reset-brand" aria-label="CareerForm PH home">
-          <BrandMark height={38} priority />
+          <BrandMark height={32} priority />
         </Link>
 
         {done ? (

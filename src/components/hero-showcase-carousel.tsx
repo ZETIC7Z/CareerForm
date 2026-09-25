@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -56,7 +56,7 @@ const CAROUSEL_ITEMS: CarouselItem[] = [
     title: 'Gov Job Portal & Careers',
     subtitle: 'Plantilla Vacancies & Live Hiring',
     badge: 'CSC PLANTILLA',
-    image: '/images/job-application-poster.jpg',
+    image: '/images/csc-plantilla-poster.jpg',
     link: '/jobs',
     linkText: 'Explore Vacancies',
     chipTop: '3,400+ Verified Plantilla Jobs',
@@ -64,33 +64,97 @@ const CAROUSEL_ITEMS: CarouselItem[] = [
   },
 ];
 
+/** How long the front card stays put before the stack moves on by itself. */
+const AUTOPLAY_MS = 5200;
+
+/** Below this the browser is probably a phone, and the stack is laid out tighter. */
+const MOBILE_QUERY = '(max-width: 767px)';
+
 export default function HeroShowcaseCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  // Two independent reasons the rotation stops: the pointer/keyboard is on the stack, or the
+  // page is in a background tab (where an off-screen animation only burns battery).
+  const [interacting, setInteracting] = useState(false);
+  const [pageHidden, setPageHidden] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const drag = useRef<{ x: number; y: number } | null>(null);
   const total = CAROUSEL_ITEMS.length;
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const mobileQuery = window.matchMedia(MOBILE_QUERY);
+    const stillQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncMobile = () => setIsMobile(mobileQuery.matches);
+    const syncStill = () => setReduceMotion(stillQuery.matches);
+    syncMobile();
+    syncStill();
+    mobileQuery.addEventListener('change', syncMobile);
+    stillQuery.addEventListener('change', syncStill);
+    return () => {
+      mobileQuery.removeEventListener('change', syncMobile);
+      stillQuery.removeEventListener('change', syncStill);
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // The launcher stays still: the visitor picks a card, nothing rotates on its own.
+  useEffect(() => {
+    const sync = () => setPageHidden(document.hidden);
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => document.removeEventListener('visibilitychange', sync);
+  }, []);
 
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % total);
+  /**
+   * The self-advance.
+   *
+   * Keyed on `currentIndex`, so the countdown restarts on every change — including the one the
+   * visitor just made themselves, which is the point: nobody wants the slide they picked to be
+   * yanked away half a second later. Reduced-motion visitors get a static stack, and the
+   * controls below stay available either way.
+   */
+  useEffect(() => {
+    if (interacting || pageHidden || reduceMotion) return;
+    const timer = window.setTimeout(() => {
+      setCurrentIndex(prev => (prev + 1) % total);
+    }, AUTOPLAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [currentIndex, interacting, pageHidden, reduceMotion, total]);
+
+  const handleNext = useCallback(() => {
+    setCurrentIndex(prev => (prev + 1) % total);
+  }, [total]);
+
+  const handlePrev = useCallback(() => {
+    setCurrentIndex(prev => (prev - 1 + total) % total);
+  }, [total]);
+
+  // Touch: a horizontal flick advances the stack, so the launcher is drivable without hunting
+  // for the round arrows on a phone.
+  const handleTouchStart = (event: React.TouchEvent) => {
+    const touch = event.touches[0];
+    drag.current = { x: touch.clientX, y: touch.clientY };
   };
 
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + total) % total);
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    const start = drag.current;
+    drag.current = null;
+    if (!start) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 44 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) handleNext();
+    else handlePrev();
   };
 
   return (
     <div
       className="hero-carousel-wrapper"
+      aria-roledescription="carousel"
+      aria-label="CareerForm PH tool showcase"
+      onMouseEnter={() => setInteracting(true)}
+      onMouseLeave={() => setInteracting(false)}
+      onFocusCapture={() => setInteracting(true)}
+      onBlurCapture={() => setInteracting(false)}
       style={{
         position: 'relative',
         width: '100%',
@@ -104,6 +168,8 @@ export default function HeroShowcaseCarousel() {
       {/* 3D Depth Viewport */}
       <div
         className="carousel-container"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{
           perspective: '1200px',
           width: '100%',
@@ -171,7 +237,8 @@ export default function HeroShowcaseCarousel() {
                 onClick={() => {
                   if (!isFront) setCurrentIndex(index);
                 }}
-                className="carousel-card liquid-glass clay-border"
+                aria-label={`${item.title} — ${item.subtitle}`}
+                className={`carousel-card liquid-glass clay-border${isFront ? ' is-front' : ''}`}
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -411,23 +478,43 @@ export default function HeroShowcaseCarousel() {
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {CAROUSEL_ITEMS.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setCurrentIndex(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              style={{
-                width: currentIndex === i ? '22px' : '7px',
-                height: '7px',
-                borderRadius: '999px',
-                background: currentIndex === i ? '#38bdf8' : 'rgba(255, 255, 255, 0.2)',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-              }}
-            />
-          ))}
+          {CAROUSEL_ITEMS.map((item, i) => {
+            const active = currentIndex === i;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setCurrentIndex(i)}
+                aria-label={`Go to slide ${i + 1}: ${item.title}`}
+                aria-current={active}
+                style={{
+                  position: 'relative',
+                  width: active ? '26px' : '7px',
+                  height: '7px',
+                  borderRadius: '999px',
+                  background: active ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  padding: 0,
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                {/* Countdown to the next slide — restarts with the index it belongs to, and
+                    freezes whenever the rotation is paused. */}
+                {active && (
+                  <span
+                    key={currentIndex}
+                    className="carousel-dot-progress"
+                    style={{
+                      animationDuration: `${AUTOPLAY_MS}ms`,
+                      animationPlayState: interacting || pageHidden || reduceMotion ? 'paused' : 'running',
+                    }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <button

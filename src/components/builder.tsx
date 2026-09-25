@@ -398,7 +398,7 @@ export default function Builder(){
       <div className="wc-left">
         <Link className="wc-back" href={projectId ? "/dashboard" : "/"} aria-label={projectId ? "Back to dashboard" : "Back to home"} title={projectId ? "Back to dashboard" : "Back to home"}><ArrowLeft size={17}/></Link>
         <Link className="wc-brand" href="/" aria-label="CareerForm PH home">
-          <BrandMark height={34}/>
+          <BrandMark height={26}/>
         </Link>
         {projectTitle && (
           <span className="wc-project-chip hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-white/5 border border-white/10 text-white max-w-[180px] truncate" title={projectTitle}>

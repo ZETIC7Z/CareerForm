@@ -423,7 +423,7 @@ export default function DashboardPage() {
     <aside className="dash-rail" style={{ background: 'linear-gradient(180deg, #0b0f1a 0%, #070a12 100%)' }}>
       <div className="dash-rail-head">
         <Link href="/" className="dash-rail-brand" aria-label="CareerForm PH home">
-          <BrandMark height={38}/>
+          <BrandMark height={30}/>
         </Link>
         <button
           type="button"

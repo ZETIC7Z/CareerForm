@@ -221,6 +221,16 @@ img{max-width:100%}
 .site-header-in{width:100%;max-width:100%;margin:0 auto;display:flex;align-items:center;gap:26px;padding:0 36px;height:70px}
 .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px;letter-spacing:-.02em;color:var(--heading)}
 .brand img{width:38px;height:33px;object-fit:contain}
+/* One artwork, one slot (brand-logo.tsx): the component mounts the artwork that matches
+   the live theme and nothing else. The dark wordmark is navy/gold and drawn for the
+   near-black field — there it also gets a hairline light rim and a faint cyan bloom, the
+   same glow language the rest of the chrome speaks. The light twin is gold/blue on
+   transparent and reads on the pale field without any glow, which is why light theme
+   drops the glow (it would smear on white); that part still tracks data-theme here so the
+   filter flips with the theme without waiting on a render. */
+.brand-mark-wrap{display:inline-flex;line-height:0}
+.brand-mark{display:block;filter:drop-shadow(0 0 1px rgba(255,255,255,.8)) drop-shadow(0 0 7px rgba(56,189,248,.35))}
+:root[data-theme=light] .brand-mark{filter:none}
 .brand small{display:block;font-size:9px;letter-spacing:.22em;color:var(--muted);font-weight:600;margin-top:1px}
 .brand-lines{display:flex;flex-direction:column;line-height:1.05}
 .site-nav{display:flex;gap:4px;margin-left:auto}
@@ -270,10 +280,21 @@ img{max-width:100%}
 
 
 /* ---------- landing ---------- */
-.hero{position:relative;overflow:hidden;padding:108px 0 88px}
+/* The hero paints the first screen's glow and the fixed glass nav floats over its top.
+   Left alone the section's own background box starts on the nav clearance line, so its
+   gradient — brightest at its own top edge — is sheared off exactly there and leaves a
+   hard horizontal seam under the nav. Pulling the section up behind the bar (and adding
+   the same amount back to its padding, so nothing inside moves) carries that edge off
+   screen: the glow now runs from the very top of the viewport. */
+.hero{
+  position:relative;overflow:hidden;
+  margin-top:calc(-1 * var(--site-nav-h,132px));
+  padding:calc(var(--site-nav-h,132px) + 108px) 0 88px;
+}
 .hero-bg{position:absolute;inset:0;pointer-events:none;background:
-  radial-gradient(900px 420px at 12% -10%,rgba(59,130,246,.08),transparent 62%),
-  radial-gradient(700px 380px at 88% 0%,var(--accent-glow),transparent 60%)}
+  radial-gradient(900px 420px at 12% -10%,rgba(59,130,246,.10),transparent 62%),
+  radial-gradient(700px 380px at 88% 0%,var(--accent-glow),transparent 60%),
+  radial-gradient(1100px 500px at 50% 120%,rgba(14,165,233,.07),transparent 65%)}
 :root[data-theme=dark] .hero-bg{background:
   radial-gradient(900px 420px at 12% -10%,rgba(255,255,255,.03),transparent 62%),
   radial-gradient(700px 380px at 88% 0%,var(--accent-glow),transparent 60%)}
@@ -301,6 +322,14 @@ img{max-width:100%}
 .hero-sub{font-size:16.5px;line-height:1.8;color:var(--muted);max-width:680px;margin:0 0 30px}
 .hero-cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
 .hero-visual{position:relative;perspective:1200px;display:flex;justify-content:center}
+/* Auto-advance countdown on the active carousel dot (hero-showcase-carousel.tsx). The
+   duration and the pause flag come from the component, the look lives here. */
+@keyframes carousel-dot-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.carousel-dot-progress{
+  position:absolute;inset:0;border-radius:inherit;transform-origin:left center;
+  background:linear-gradient(90deg,#38bdf8,#10b981);
+  animation-name:carousel-dot-fill;animation-timing-function:linear;animation-fill-mode:both;
+}
 
 /* Glassy PDS Product Frame — Perfectly sized to PDS document with 3D depth & glow */
 .hero-product-frame{
@@ -1206,7 +1235,7 @@ input:focus,select:focus,textarea:focus{
   .site-header-in{padding:0 16px}
   .container{padding:0 18px}
   .changes-band{padding:34px 24px}
-  .hero{padding:56px 0 50px}
+  .hero{padding:calc(var(--site-nav-h,120px) + 56px) 0 50px}
   .section{padding:54px 0}
   .site-footer-in{grid-template-columns:1fr;gap:26px}
   .section-tabs{gap:6px}
@@ -2106,6 +2135,36 @@ body.intro-lock{overflow:hidden}
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.12);
+}
+
+/* Light-theme hero glow. The dark field gets its bloom from luminance contrast, so the
+   near-invisible dark-mode washes would leave light mode flat. These use the same
+   geometry — accent-tinted, anchored top corners and a soft base glow — at opacities
+   tuned to stay airy on white instead of banding grey. */
+:root[data-theme=light] .hero-bg{
+  background:
+    radial-gradient(900px 420px at 12% -10%,rgba(6,182,212,.14),transparent 62%),
+    radial-gradient(700px 380px at 88% 0%,rgba(59,130,246,.12),transparent 60%),
+    radial-gradient(1100px 500px at 50% 120%,rgba(14,165,233,.09),transparent 65%);
+}
+
+/* Light-theme balance: the carousel cards, chips and round controls keep their dark-glass
+   inline styling in the component, so on white they need a hairline and a shadow to hold
+   their edges; the front card gets a faint accent ring so the active slide still reads.
+   Overrides only — every size/position value stays the one source in the component. */
+:root[data-theme=light] .carousel-card{
+  box-shadow:0 18px 40px -18px rgba(2,6,23,.35),0 0 0 1px rgba(2,6,23,.06);
+}
+:root[data-theme=light] .carousel-card.is-front{
+  box-shadow:0 22px 45px -18px rgba(2,6,23,.4),0 0 0 1px rgba(6,182,212,.35);
+}
+:root[data-theme=light] .card-image-wrap{
+  box-shadow:inset 0 2px 6px rgba(2,6,23,.18),0 0 0 1px rgba(2,6,23,.06);
+}
+:root[data-theme=light] .hero-carousel-wrapper button{
+  background:rgba(2,6,23,.05);
+  border-color:rgba(2,6,23,.12);
+  color:#0f172a;
 }
 .glass-nav-link {
   color: var(--muted);

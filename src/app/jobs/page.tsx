@@ -185,7 +185,7 @@ export default function JobsPage() {
         <div className="wc-left">
           <Link className="wc-brand" href="/" aria-label="CareerForm PH home">
             <span className="flex items-center gap-2 select-none">
-              <BrandMark height={32}/>
+              <BrandMark height={24}/>
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-[#06b6d4]/40 bg-[#06b6d4]/10 text-[#06b6d4]">
                 GOV JOBS PH
               </span>
