@@ -29,6 +29,8 @@ import ScrollAnimations from '@/components/scroll-animations';
 import UpdatesBox from '@/components/updates-box';
 import HeroShowcaseCarousel from '@/components/hero-showcase-carousel';
 import TipJarModal, { TipJarButton } from '@/components/tip-jar-modal';
+import JsonLd from '@/components/json-ld';
+import { faqPageNode, graph } from '@/lib/structured-data';
 import CoverLetterSelectionModal from '@/components/cover-letter-selection-modal';
 import ToolsSelectorModal from '@/components/tools-selector-modal';
 
@@ -68,6 +70,40 @@ const CHANGES=[
   {t:'Stricter authenticity checks',d:'Photo, signature and government-ID blocks are enforced on page 4. The CSC may invalidate sheets with missing or non-conforming identification details.'},
 ];
 
+/**
+ * Answers to the questions this site actually gets asked — the ones a person types into
+ * Google before they ever see the site ("is the PDS free", "will it print on A4",
+ * "what changed in the 2026 revision"). They are rendered visibly below and described
+ * one-for-one as FAQ structured data: Google requires the answer on the page, so the
+ * markup and the copy are the same strings.
+ */
+const HOME_FAQ=[
+  {
+    q:'How do I make a Personal Data Sheet for free?',
+    a:'Open the PDS builder, type your details into the mapped form, and a live mirror of the official CSC CS Form 212 (Revised 2026) fills itself beside it. CareerForm PH is free, needs no account and adds no watermark — print or export the A4 sheet whenever you are ready.',
+  },
+  {
+    q:'Is my personal data uploaded anywhere?',
+    a:'No. The form is filled and the sheet is rendered in your own browser, so nothing is uploaded while you work. Data leaves your device only if you deliberately sign in and choose to save a draft to your account, or send a file to yourself.',
+  },
+  {
+    q:'Which version of the PDS does it build?',
+    a:'The Civil Service Commission CS Form No. 212, Revised 2026 — the version agencies now require. The template mirrors the official workbook; when an agency insists on the original file, download it from csc.gov.ph.',
+  },
+  {
+    q:'Can I print the finished PDS on A4 paper?',
+    a:'Yes. Print at 100% scale (not “fit to page”) on A4, and what comes out matches the official four-page layout, so the sections, codes and page breaks line up the way the receiving office expects.',
+  },
+  {
+    q:'What changed in the 2026 revision of CS Form 212?',
+    a:'The Work Experience section was restructured to separate government from private service and to add appointment-status columns, the declarations expanded to cover indigenous group membership, disability and solo-parent status, and the photo, signature and government-ID blocks on page 4 are now treated as authenticity checks. Entries must be true, complete and non-overlapping.',
+  },
+  {
+    q:'Do I need an account to use CareerForm PH?',
+    a:'No account is needed to build a PDS or a letter. A free account adds syncing across devices, bookmarked vacancies, notifications and saved drafts — useful, but optional.',
+  },
+];
+
 const STATS=[
   {b:'100%',s:'In-browser. Nothing uploaded.'},
   {b:'4',s:'Pages mirrored live as you type.'},
@@ -82,6 +118,10 @@ export default function Home(){
 
   return <div className="home-shell">
     <ScrollAnimations />
+
+    {/* FAQ answers, mirrored as FAQPage structured data so the crawler reads the same
+        facts a visitor does. */}
+    <JsonLd data={graph([faqPageNode(HOME_FAQ.map(item=>({question:item.q,answer:item.a})))])}/>
 
     <section className="hero" style={{ position: 'relative', overflow: 'hidden', isolation: 'isolate', zIndex: 1 }}>
       <div className="hero-bg" aria-hidden/>
@@ -303,7 +343,7 @@ export default function Home(){
     </section>
 
     {/* CSC FORM 212 WHAT CHANGED */}
-    <section className="section">
+    <section className="section" id="what-changed">
       <div className="container">
         <div className="changes-band">
           <h2>CS Form 212 (PDS Revised 2026): what changed — and what you need to do.</h2>
@@ -312,6 +352,26 @@ export default function Home(){
             {CHANGES.map(c=><div key={c.t}><strong>{c.t}</strong><span>{c.d}</span></div>)}
           </div>
           <p className="note">CareerForm PH mirrors the official Revised 2026 workbook (obtained through CSC&apos;s own publication channels — see template provenance in the repository). Always download the source form from csc.gov.ph when an agency requires the original file.</p>
+        </div>
+      </div>
+    </section>
+
+    {/* FREQUENTLY ASKED — real questions, answered in plain text rather than sealed in
+        markup the crawler has to guess at. */}
+    <section className="section" id="faq">
+      <div className="container">
+        <div className="section-head">
+          <span className="hero-kicker">Questions, answered</span>
+          <h2>Frequently asked about the PDS</h2>
+          <p>The things applicants ask before they start filling anything in — answered without the fine print.</p>
+        </div>
+        <div className="faq-grid">
+          {HOME_FAQ.map(item=>(
+            <details className="faq-item" key={item.q}>
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+            </details>
+          ))}
         </div>
       </div>
     </section>

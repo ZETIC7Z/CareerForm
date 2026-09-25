@@ -455,6 +455,17 @@ img{max-width:100%}
 .changes-list span{font-size:12.5px;line-height:1.7;color:var(--muted)}
 .changes-band .note{margin:24px 0 0;font-size:12px;color:var(--muted);position:relative}
 
+/* Homepage FAQ — native details/summary so the answers are real text in the HTML,
+   readable by a crawler and by someone with JavaScript blocked. */
+.faq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:var(--glow);transition:border-color .25s}
+.faq-item[open]{border-color:var(--accent)}
+.faq-item summary{cursor:pointer;font-weight:700;font-size:14.5px;color:var(--heading);line-height:1.55;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;list-style:none}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:'+';color:var(--accent);font-size:19px;line-height:1;font-weight:700;flex-shrink:0}
+.faq-item[open] summary::after{content:'\2212'}
+.faq-item p{color:var(--muted);font-size:13.5px;line-height:1.8;margin:12px 0 0}
+
 .mission{display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center}
 .mission-visual{position:relative}
 .mission-visual img{border-radius:20px;box-shadow:var(--shadow-lg);width:min(100%,390px);display:block;border:1px solid var(--line);margin:auto}

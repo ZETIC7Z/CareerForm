@@ -1,4 +1,11 @@
 /**
+ * The absolute origin every canonical, sitemap and structured-data URL is built from.
+ * Override it with NEXT_PUBLIC_SITE_URL (a custom domain later, say) and every tag in
+ * the app follows — metadata in `app/layout.tsx` and the JSON-LD graph both read it here.
+ */
+export const SITE_ORIGIN=(process.env.NEXT_PUBLIC_SITE_URL||'https://careerform-ph.vercel.app').replace(/\/$/,'');
+
+/**
  * Revision of the bundled official form assets (`public/csc-2026.pdf`, `csc-2026.xlsx`).
  * Bump this whenever those files change: the template endpoints are served with a
  * one-year immutable cache, so without a new value returning visitors would keep the

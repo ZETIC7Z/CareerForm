@@ -1,21 +1,18 @@
 import type {Metadata,Viewport} from 'next';
 import './globals.css';
 import SiteChrome from '@/components/site-chrome';
+import JsonLd from '@/components/json-ld';
+import {SITE_ORIGIN} from '@/lib/site';
+import {graph,organizationNode,websiteNode} from '@/lib/structured-data';
 
 // System font stacks — no external fetch needed, builds work offline
 const fontVarsClass = 'font-vars-applied';
 
-/**
- * The absolute origin every share/SEO URL is built from. Canonical URLs and the
- * Open Graph/Twitter images below resolve against it — change it here (or point
- * NEXT_PUBLIC_SITE_URL at the deployed domain) and every tag follows.
- */
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://careerform-ph.vercel.app';
-
 export const metadata:Metadata={
   // Prefixes every relative URL in this metadata so OG/Twitter cards carry absolute
   // image URLs — the requirement social scrapers enforce before they render a preview.
-  metadataBase:new URL(SITE_URL),
+  // SITE_ORIGIN (lib/site) is the same origin the JSON-LD graph below is built from.
+  metadataBase:new URL(SITE_ORIGIN),
   title:{default:'CareerForm PH — Free CSC PDS Builder (Revised 2026)',template:'%s · CareerForm PH'},
   description:'Build your Civil Service Personal Data Sheet (CS Form 212, Revised 2026) free, in your browser. Live official-form preview, smart import, application letters — no sign-up, nothing uploaded.',
   keywords:['PDS','Personal Data Sheet','CS Form 212','Revised 2026','CSC','Civil Service Commission','Philippines','government jobs','plantilla','job application','resume builder'],
@@ -111,6 +108,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body>
+        {/* Structured data for every page: who publishes the site, and what the site is.
+            The per-tool WebApplication nodes live on their own routes. */}
+        <JsonLd data={graph([organizationNode(),websiteNode()])}/>
         <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
