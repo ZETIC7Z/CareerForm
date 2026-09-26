@@ -1,25 +1,56 @@
 /**
- * Build the browser-tab icon set from the CareerForm icon.
+ * Rebuild every CareerForm brand asset from the designer's exports.
  *
- *   node scripts/make-favicon.mjs [source.png]
+ *   node scripts/make-brand-assets.mjs
+ *   node scripts/make-brand-assets.mjs --dark "<export.png>" --light "<export.png>"
+ *   node scripts/make-brand-assets.mjs --emblem "<mark.png>"
  *
- * Why this exists: `src/app/favicon.ico` shipped as the untouched Next.js starter file,
- * whose artwork is the Vercel triangle. Browsers request that path first, so the tab
- * showed Vercel's mark on top of CareerForm. Replacing it needs a real multi-resolution
- * .ico, and the project deliberately keeps no image dependency (sharp is only present as
- * a transitive Next.js optional), so the decode, the alpha-aware downscale and the ICO
- * container are all done here with Node's own zlib.
+ * Three jobs, in order:
  *
- * Outputs:
- *   src/app/favicon.ico     16 / 32 / 48 / 256 px entries
- *   src/app/icon.png        512 px square, served at /icon.png
- *   src/app/apple-icon.png  180 px square for iOS home screens
+ *   1. Crop each wordmark export to its ink box and write the two web logos. The dark
+ *      artwork is white lettering (it only reads on the near-black theme) and the light
+ *      one is black lettering, so `brand-logo.tsx` swaps between them with `data-theme`.
+ *      Both are cropped to the *same* box on purpose: the header swaps artwork on a theme
+ *      toggle, and two different intrinsic sizes would make the header twitch.
+ *   2. Cut the emblem out of the wordmark (its ink is the leftmost column run) and use it
+ *      as the icon master. The emblem is the same mark as the standalone export, but a
+ *      ~430px render instead of a ~100px one, so the 256px favicon entry and the 512px
+ *      touch icon stay sharp instead of being upscaled from a thumbnail.
+ *   3. Emit the icon set. `src/app/favicon.ico` once shipped as the untouched Next.js
+ *      starter file — the Vercel triangle in the browser tab — so it needs a real
+ *      multi-resolution .ico. The project deliberately keeps no image dependency (sharp
+ *      is only present as a transitive Next.js optional), so the decode, the alpha-aware
+ *      downscale and the ICO container are all done here with Node's own zlib.
+ *
+ * Inputs: the two `1920x450` wordmark exports (or the already-cropped files, in which case
+ * the crop is a no-op and the run is repeatable). Outputs:
+ *
+ *   public/careerform-logo.png        dark theme  (white lettering)
+ *   public/careerform-logo-light.png  light theme (black lettering)
+ *   public/careerform-icon.png        the mark alone, square
+ *   src/app/favicon.ico               16 / 32 / 48 / 256 px entries
+ *   src/app/icon.png                  512 px square, served at /icon.png
+ *   src/app/apple-icon.png            180 px square for iOS home screens
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 
-const SOURCE = process.argv[2] || 'public/careerform-icon.png';
+const args = process.argv.slice(2);
+const flag = (name, fallback) => {
+  const at = args.indexOf(`--${name}`);
+  return at >= 0 && args[at + 1] ? args[at + 1] : fallback;
+};
+
+const DARK_SOURCE = flag('dark', 'public/careerform-logo.png');
+const LIGHT_SOURCE = flag('light', 'public/careerform-logo-light.png');
+const EMBLEM_SOURCE = flag('emblem', '');
+
+const WEB_LOGOS = {
+  dark: 'public/careerform-logo.png',
+  light: 'public/careerform-logo-light.png',
+};
+const WEB_ICON = 'public/careerform-icon.png';
 
 // ----------------------------------------------------------------- PNG decoding
 const CRC_TABLE = (() => {
@@ -144,6 +175,26 @@ function encodePng(width, height, rgba) {
 }
 
 // ----------------------------------------------------------------- geometry
+/** Tight rectangle around the visible pixels, so a logo with padding is not shrunk by it. */
+function inkBounds({ width, height, rgba }) {
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (rgba[(y * width + x) * 4 + 3] > 8) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return { x: 0, y: 0, w: width, h: height };
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
 /** Tight box around the visible pixels, so a logo with padding is not shrunk by it. */
 function alphaBounds({ width, height, rgba }) {
   let minX = width;
@@ -302,14 +353,103 @@ function buildIco(entries) {
   return Buffer.concat([header, directory, ...entries.map(e => e.png)]);
 }
 
-// ----------------------------------------------------------------- run
-const source = decodePng(fs.readFileSync(SOURCE));
-const crop = alphaBounds(source);
+// ----------------------------------------------------------------- crop + emblem
+/** A new image holding exactly `box` of `src`; samples outside it clamp to the edge. */
+function crop(src, box) {
+  const rgba = Buffer.alloc(box.w * box.h * 4);
+  for (let y = 0; y < box.h; y += 1) {
+    for (let x = 0; x < box.w; x += 1) {
+      const px = tap(src, box.x + x, box.y + y, 1);
+      const alphaSum = px.a / 255;
+      const d = (y * box.w + x) * 4;
+      rgba[d] = alphaSum ? Math.round(px.r / alphaSum) : 0;
+      rgba[d + 1] = alphaSum ? Math.round(px.g / alphaSum) : 0;
+      rgba[d + 2] = alphaSum ? Math.round(px.b / alphaSum) : 0;
+      rgba[d + 3] = Math.round(px.a);
+    }
+  }
+  return { width: box.w, height: box.h, rgba };
+}
 
-// One square master, then every size from it. Downscaling straight from 568px to 16px in
-// a single step would average ~35 source pixels per output pixel and blur the mark into
-// mush; going through 256 first keeps the edges recognisable.
-const master = { width: 256, height: 256, rgba: resize(source, 256, crop) };
+/** Smallest box containing both — the canvas the two logos are cropped to, so the pair
+ *  always comes out the same size even if one export has a stray pixel more ink. */
+function union(a, b) {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+}
+
+/**
+ * The emblem sits to the left of the wordmark, separated by a column gap, so the mark is
+ * the first run of inked columns. Cutting it from the wordmark export rather than taking a
+ * separate small file is what keeps the 512px icon from being an upscaled thumbnail.
+ */
+function leftmostRun(src) {
+  for (let x = 0; x < src.width; x += 1) {
+    let inked = false;
+    for (let y = 0; y < src.height; y += 1) {
+      if (src.rgba[(y * src.width + x) * 4 + 3] > 8) {
+        inked = true;
+        break;
+      }
+    }
+    if (!inked) continue;
+    let end = x;
+    while (end + 1 < src.width) {
+      let any = false;
+      for (let y = 0; y < src.height; y += 1) {
+        if (src.rgba[(y * src.width + (end + 1)) * 4 + 3] > 8) {
+          any = true;
+          break;
+        }
+      }
+      if (!any) break;
+      end += 1;
+    }
+    return { x, end };
+  }
+  return null;
+}
+
+// ----------------------------------------------------------------- run
+const exportedDark = decodePng(fs.readFileSync(DARK_SOURCE));
+const exportedLight = decodePng(fs.readFileSync(LIGHT_SOURCE));
+
+const darkBox = inkBounds(exportedDark);
+const lightBox = inkBounds(exportedLight);
+const shared = union(darkBox, lightBox);
+
+const darkLogo = crop(exportedDark, shared);
+const lightLogo = crop(exportedLight, shared);
+
+fs.writeFileSync(WEB_LOGOS.dark, encodePng(darkLogo.width, darkLogo.height, darkLogo.rgba));
+fs.writeFileSync(WEB_LOGOS.light, encodePng(lightLogo.width, lightLogo.height, lightLogo.rgba));
+
+console.log(`dark  ${DARK_SOURCE} — ${exportedDark.width}x${exportedDark.height}, ink box ${darkBox.w}x${darkBox.h} at (${darkBox.x}, ${darkBox.y})`);
+console.log(`light ${LIGHT_SOURCE} — ${exportedLight.width}x${exportedLight.height}, ink box ${lightBox.w}x${lightBox.h} at (${lightBox.x}, ${lightBox.y})`);
+console.log(`logos written at ${shared.w}x${shared.h} — ${WEB_LOGOS.dark}, ${WEB_LOGOS.light}`);
+
+// The emblem master. `--emblem` short-circuits the cut for a standalone mark export.
+let emblem = darkLogo;
+if (EMBLEM_SOURCE) {
+  emblem = decodePng(fs.readFileSync(EMBLEM_SOURCE));
+  console.log(`emblem from ${EMBLEM_SOURCE} — ${emblem.width}x${emblem.height}`);
+} else {
+  const run = leftmostRun(darkLogo);
+  if (!run) throw new Error('the dark artwork has no ink — nothing to cut an emblem from');
+  const stem = crop(darkLogo, { x: 0, y: 0, w: run.end + 1, h: darkLogo.height });
+  emblem = crop(stem, inkBounds(stem));
+  fs.writeFileSync(WEB_ICON, encodePng(emblem.width, emblem.height, emblem.rgba));
+  console.log(`emblem cut from columns ${run.x}-${run.end} — ${emblem.width}x${emblem.height} → ${WEB_ICON}`);
+}
+
+const source = emblem;
+const emblemBox = alphaBounds(source);
+
+// One square master, then every size from it. Downscaling straight to 16px in a single
+// step would average dozens of source pixels per output pixel and blur the mark into mush;
+// going through 256 first keeps the edges recognisable.
+const master = { width: 256, height: 256, rgba: resize(source, 256, emblemBox) };
 const masterCrop = { x: 0, y: 0, size: 256 };
 const at = size => encodePng(size, size, size === 256 ? master.rgba : resize(master, size, masterCrop));
 
@@ -317,10 +457,10 @@ const sizes = [16, 32, 48, 256];
 const ico = buildIco(sizes.map(size => ({ size, png: at(size) })));
 
 fs.writeFileSync(path.join('src/app/favicon.ico'), ico);
-fs.writeFileSync(path.join('src/app/icon.png'), encodePng(512, 512, resize(source, 512, crop)));
-fs.writeFileSync(path.join('src/app/apple-icon.png'), encodePng(180, 180, resize(source, 180, crop)));
+fs.writeFileSync(path.join('src/app/icon.png'), encodePng(512, 512, resize(source, 512, emblemBox)));
+fs.writeFileSync(path.join('src/app/apple-icon.png'), encodePng(180, 180, resize(source, 180, emblemBox)));
 
-console.log(`source      ${SOURCE} — ${source.width}x${source.height}, content box ${crop.size}px at (${crop.x}, ${crop.y})`);
+console.log(`emblem      ${source.width}x${source.height}, content box ${emblemBox.size}px at (${emblemBox.x}, ${emblemBox.y})`);
 console.log(`favicon.ico ${ico.length} bytes (${sizes.join(', ')} px)`);
 console.log('icon.png 512x512');
 console.log('apple-icon.png 180x180');

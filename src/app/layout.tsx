@@ -52,7 +52,7 @@ export const metadata:Metadata={
   },
   // Browser-tab icon. The .ico is first because Chrome, Edge and the Windows shell look
   // for /favicon.ico before anything else — it is generated from the same emblem by
-  // `node scripts/make-favicon.mjs`, so every path shows the CareerForm mark and never
+  // `node scripts/make-brand-assets.mjs`, so every path shows the CareerForm mark and never
   // the framework's default artwork. The PNG covers browsers that prefer it, and the
   // 180px square is what iOS puts on a home screen.
   icons:{

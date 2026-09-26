@@ -222,14 +222,18 @@ img{max-width:100%}
 .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px;letter-spacing:-.02em;color:var(--heading)}
 .brand img{width:38px;height:33px;object-fit:contain}
 /* One artwork, one slot (brand-logo.tsx): the component mounts the artwork that matches
-   the live theme and nothing else. The dark wordmark is navy/gold and drawn for the
-   near-black field — there it also gets a hairline light rim and a faint cyan bloom, the
-   same glow language the rest of the chrome speaks. The light twin is gold/blue on
-   transparent and reads on the pale field without any glow, which is why light theme
-   drops the glow (it would smear on white); that part still tracks data-theme here so the
-   filter flips with the theme without waiting on a render. */
+   the live theme and nothing else. Both artworks share one geometry (1881x380, generated
+   by scripts/make-brand-assets.mjs) so the swap never moves the header.
+
+   The dark wordmark is a hairline white outline — drawn for the near-black field, but thin
+   enough that it needs a touch of help: a 1px rim widens the strokes just enough to hold
+   up on a dark panel, and the faint cyan bloom is the same glow language the rest of the
+   chrome speaks. Nothing heavier: a wide blur turns hairline lettering into a smudge.
+   The light twin is heavy black lettering and needs no help at all, so light theme drops
+   the filter. That part still tracks data-theme here, so the filter flips with the theme
+   without waiting on a render. */
 .brand-mark-wrap{display:inline-flex;line-height:0}
-.brand-mark{display:block;filter:drop-shadow(0 0 1px rgba(255,255,255,.8)) drop-shadow(0 0 7px rgba(56,189,248,.35))}
+.brand-mark{display:block;filter:drop-shadow(0 0 1px rgba(255,255,255,.85)) drop-shadow(0 0 5px rgba(56,189,248,.28))}
 :root[data-theme=light] .brand-mark{filter:none}
 .brand small{display:block;font-size:9px;letter-spacing:.22em;color:var(--muted);font-weight:600;margin-top:1px}
 .brand-lines{display:flex;flex-direction:column;line-height:1.05}

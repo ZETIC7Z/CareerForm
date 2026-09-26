@@ -11,9 +11,9 @@ import Image from 'next/image';
  * wordmark, so a second text version would only duplicate and fight it.
  *
  * Two artworks, but only one of them is ever on the page. `/careerform-logo.png`
- * (navy/gold lettering) is drawn for the near-black dark theme; `/careerform-logo-light.png`
- * (gold/blue on transparent) is the light-theme twin, cropped from the same 1920x450 source
- * to the same ink box, so both share the exact 1879x361 geometry and render at the same size
+ * (white outlined lettering) is drawn for the near-black dark theme; `/careerform-logo-light.png`
+ * (heavy black lettering) is the light-theme twin, cropped from the same 1920x450 source to
+ * the same ink box, so both share the exact 1881x380 geometry and render at the same size
  * and position. Which `<Image>` is mounted follows the live theme, so a page never carries a
  * second, invisible logo: previously both were always mounted and the browser still fetched
  * and decoded the mark that CSS then hid — a second `<img>`, a wasted request, and a
@@ -25,7 +25,9 @@ import Image from 'next/image';
  * server render and for the hydration pass (which must match the server), then re-renders
  * with the real theme moments later. A visitor sitting in light mode can see the dark
  * wordmark for that instant — it is navy/gold on white and reads fine — and the light
- * artwork is normally already in the browser cache from their last visit.
+ * artwork is normally already in the browser cache from their last visit. The white wordmark
+ * on the dark field is invisible for that instant, but the sun and flag are not, so the slot
+ * reads as the mark rather than as nothing.
  *
  * `priority` should only be set for the instance that is above the fold. It maps to
  * `loading="eager"` / `fetchPriority="high"` rather than Next 16's deprecated `priority`
@@ -87,20 +89,20 @@ export default function BrandMark({
       <Image
         src={MARKS[theme]}
         alt={title}
-        width={1879}
-        height={361}
+        width={1881}
+        height={380}
         // The mark is only ever drawn a couple of hundred pixels wide, so the browser is
         // told that up front and never pulls the full 1880px asset for it.
-        sizes={`${Math.round(numeric * 5.2)}px`}
+        sizes={`${Math.round(numeric * 5)}px`}
         loading={priority ? 'eager' : 'lazy'}
         fetchPriority={priority ? 'high' : undefined}
         className="brand-mark"
-        // `aspectRatio` is pinned (rather than left to the attributes' `auto 1879 / 361`)
+        // `aspectRatio` is pinned (rather than left to the attributes' `auto 1881 / 380`)
         // because the artwork is replaced on a theme toggle: a src change on an already
         // laid-out srcset image can leave Chrome reporting a bogus intrinsic ratio, which
         // collapsed `width: auto` down to about half the mark's width. The ratio is the
         // same for both artworks, so stating it here keeps every size correct.
-        style={{ height, width: 'auto', aspectRatio: '1879 / 361', objectFit: 'contain', ...style } as React.CSSProperties}
+        style={{ height, width: 'auto', aspectRatio: '1881 / 380', objectFit: 'contain', ...style } as React.CSSProperties}
       />
     </span>
   );
