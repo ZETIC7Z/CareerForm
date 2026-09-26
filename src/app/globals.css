@@ -222,19 +222,23 @@ img{max-width:100%}
 .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px;letter-spacing:-.02em;color:var(--heading)}
 .brand img{width:38px;height:33px;object-fit:contain}
 /* One artwork, one slot (brand-logo.tsx): the component mounts the artwork that matches
-   the live theme and nothing else. Both artworks share one geometry (1881x380, generated
+   the live theme and nothing else. Both files share one trimmed frame (1412x304, written
    by scripts/make-brand-assets.mjs) so the swap never moves the header.
 
-   The dark wordmark is a hairline white outline — drawn for the near-black field, but thin
-   enough that it needs a touch of help: a 1px rim widens the strokes just enough to hold
-   up on a dark panel, and the faint cyan bloom is the same glow language the rest of the
-   chrome speaks. Nothing heavier: a wide blur turns hairline lettering into a smudge.
-   The light twin is heavy black lettering and needs no help at all, so light theme drops
-   the filter. That part still tracks data-theme here, so the filter flips with the theme
-   without waiting on a render. */
+   Nothing else is applied here on purpose. The mark used to carry a white rim and a cyan
+   bloom to prop up a hairline artwork on the near-black field; the supplied export already
+   draws its own weight and its own shadow, and it asks to be shown exactly as it is. So
+   there is no filter, no blend mode and no opacity — just the artwork. */
 .brand-mark-wrap{display:inline-flex;line-height:0}
-.brand-mark{display:block;filter:drop-shadow(0 0 1px rgba(255,255,255,.85)) drop-shadow(0 0 5px rgba(56,189,248,.28))}
-:root[data-theme=light] .brand-mark{filter:none}
+.brand-mark{display:block}
+/* The header instance sits a few pixels high: the artwork's flag emblem hangs below the
+   lettering, so the lockup's optical centre is lower than the nav row's geometric centre
+   and the wordmark reads slightly sunk next to the links. A small fixed lift (not a
+   percentage of a clamp, so it cannot scale away) levels the wordmark with the menu. */
+.header-brand{position:relative;top:-4px}
+@media (max-width: 767px){
+  .header-brand{top:-3px}
+}
 .brand small{display:block;font-size:9px;letter-spacing:.22em;color:var(--muted);font-weight:600;margin-top:1px}
 .brand-lines{display:flex;flex-direction:column;line-height:1.05}
 .site-nav{display:flex;gap:4px;margin-left:auto}
@@ -2150,6 +2154,204 @@ body.intro-lock{overflow:hidden}
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.12);
+}
+
+/* ============================================================
+   Live status pill (live-time-weather.tsx): DATE · TIME · WEATHER.
+   The old pill was inline-styled; this is its replacement, built from the same material
+   values as the accounts badge beside it so the strip still reads as one bar. The clock
+   is deliberately the biggest thing on the plate — the date and the weather are context
+   around it. Everything stays on one line down to 360px by shrinking the type, not by
+   dropping information.
+   ============================================================ */
+.ltw-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  color: #f8fafc;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  user-select: none;
+  white-space: nowrap;
+}
+.ltw-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: ltw-pulse 2s infinite;
+}
+.ltw-date {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+.ltw-time {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+}
+.ltw-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.ltw-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ltw-temp {
+  font-size: 13px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+.ltw-city {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+.ltw-pin { flex-shrink: 0; }
+@media (max-width: 640px) {
+  .ltw-pill { gap: 8px; padding: 5px 12px; }
+  .ltw-time { font-size: 14px; }
+  .ltw-date { font-size: 10.5px; }
+}
+@media (max-width: 420px) {
+  .ltw-date { display: none; }
+  .ltw-sep { display: none; }
+}
+
+/* The animated weather glyph. One inline SVG, one set of keyframes; the sun's rays turn,
+   the cloud breathes, rain falls, the bolt flashes and fog slides. All of it stops for
+   readers who ask for reduced motion. */
+.wi { display: block; flex-shrink: 0; overflow: visible; }
+.wi-sun { transform-origin: 12px 12px; }
+.wi-partly .wi-sun { transform: translate(-3.6px, -4.2px) scale(0.78); }
+.wi-sun-core { fill: #fbbf24; }
+.wi-rays { transform-origin: 12px 12px; animation: wi-spin 16s linear infinite; }
+.wi-cloud-body { fill: #e2e8f0; }
+.wi-rain .wi-cloud-body,
+.wi-thunder .wi-cloud-body { fill: #cbd5e1; }
+.wi-cloud { animation: wi-drift 4.5s ease-in-out infinite alternate; }
+.wi-drops .wi-drop { animation: wi-fall 1.3s linear infinite; }
+.wi-drops .wi-drop-2 { animation-delay: 0.45s; }
+.wi-drops .wi-drop-3 { animation-delay: 0.9s; }
+.wi-bolt { fill: #fde047; animation: wi-flash 2.4s ease-in-out infinite; }
+.wi-fog-line { stroke: #cbd5e1; animation: wi-fog 3.6s ease-in-out infinite alternate; }
+.wi-fog-line-2 { animation-delay: 0.9s; }
+@keyframes wi-spin { to { transform: rotate(360deg); } }
+@keyframes wi-drift { from { transform: translateX(-0.7px); } to { transform: translateX(0.9px); } }
+@keyframes wi-fall {
+  0% { transform: translateY(-1.6px); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translateY(2.4px); opacity: 0; }
+}
+@keyframes wi-flash {
+  0%, 54%, 100% { opacity: 0.2; }
+  58%, 68% { opacity: 1; }
+}
+@keyframes wi-fog { from { transform: translateX(-1.5px); } to { transform: translateX(1.5px); } }
+@keyframes ltw-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px #10b981; }
+  50% { opacity: 0.55; box-shadow: 0 0 2px #10b981; }
+}
+
+/* The live registered-accounts badge (accounts-counter.tsx). It shares the header's top
+   strip with the clock pill, and it is deliberately built from the clock's own values
+   rather than from the theme tokens: the two are one status bar, so they stay one material
+   in both themes instead of the strip splitting into a dark pill and a pale one on a light
+   page. Everything on the plate is white-on-glass, which is why the ink below is fixed too.
+
+   Two details earn their keep. The value carries a reserved `min-width` in tabular figures,
+   because the strip is centred: without it the clock slides sideways the moment the count
+   gains a digit. And the label drops out under 768px, where the strip is too narrow for the
+   clock and a full-width badge to sit side by side — the dot and the number still say
+   everything, and the badge keeps its full accessible name in every state. */
+.acc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  user-select: none;
+}
+.acc-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse 2s infinite;
+}
+.acc-badge-dot[data-reachable=no] { background: #64748b; box-shadow: none; animation: none; }
+.acc-badge-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+/* The odometer. Each digit column is a mask (`.acc-digit`) holding a vertical reel of
+   0–9 (`.acc-reel`); the component sets `translateY(-N em)` on the reel and the transition
+   does the rest. line-height is pinned to 1 because the reel steps in whole `em` units —
+   any other line-height would land between digits. The opening roll (0 → total) uses the
+   same transition; reels that mount on their final transform would never animate, which
+   is exactly why the component starts every column at 0. */
+.acc-badge-value {
+  min-width: 3.4ch;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+.acc-odometer { display: inline-flex; align-items: baseline; }
+.acc-digit {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+}
+.acc-reel {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(0);
+  transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.acc-reel > span { display: block; height: 1em; line-height: 1; }
+.acc-sep { display: inline-block; }
+.acc-badge-value[data-ticked=yes] { color: #34d399; text-shadow: 0 0 12px rgba(52, 211, 153, 0.55); }
+@media (max-width: 767px) {
+  .acc-badge-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .acc-reel { transition: none; }
+  .ltw-dot, .wi-rays, .wi-cloud, .wi-drops .wi-drop, .wi-bolt, .wi-fog-line { animation: none; }
 }
 
 /* Light-theme hero glow. The dark field gets its bloom from luminance contrast, so the
@@ -4744,8 +4946,7 @@ body.intro-lock{overflow:hidden}
 
 :root[data-theme=light] .dash-rail {
   background: linear-gradient(180deg, #10161f 0%, #0b1017 100%);
-}
-:root[data-theme=light] .dash-card {
+}:root[data-theme=light] .dash-card {
   background: #ffffff;
 }
 :root[data-theme=light] .dash-job-card,
@@ -4757,3 +4958,100 @@ body.intro-lock{overflow:hidden}
   background: #ffffff;
 }
 
+
+/* ============================================================
+   Intro splash (intro-splash.tsx)
+   ============================================================ */
+/* A single black stage, edge to edge, that plays two marks in sequence. It mounts on top
+   of everything (z-index above the header's z-50), locks page scroll while it is up, and
+   the choreography lives in three CSS animations whose delays match the component's
+   timers: ZETICUZ in/hold/out, then CareerForm in/hold/out, then the stage itself
+   dissolves. The dark artwork is used regardless of theme — the stage is black, and the
+   site's default theme is dark, so the reveal never flashes a wrong-coloured page. */
+.intro-lock { overflow: hidden !important; }
+
+.intro-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #000000;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  overflow: hidden;
+  /* The stage holds black for the whole show, then fades out over the last 1.25s. */
+  animation: intro-stage 5.1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.intro-splash-exit { animation: intro-stage-fade 1.25s ease forwards; }
+
+@keyframes intro-stage {
+  0%, 75.5% { opacity: 1; }   /* 0 → ~3.85s: solid black while the marks play */
+  100% { opacity: 0; }        /* ~3.85s → 5.1s: dissolve to the waiting site */
+}
+@keyframes intro-stage-fade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Both marks share one centred cell; each img animates independently above it. */
+.intro-splash > img {
+  grid-area: 1 / 1;
+  justify-self: center;
+  align-self: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ZETICUZ, first: fade in, hold, fade out — 0 → 1.95s. */
+.intro-zeticuz {
+  width: clamp(150px, 21vw, 250px);
+  height: auto;
+  opacity: 0;
+  animation: intro-zeticuz 1.95s ease-in-out forwards;
+}
+@keyframes intro-zeticuz {
+  0% { opacity: 0; transform: scale(0.94); }
+  18% { opacity: 1; transform: scale(1); }       /* in by ~0.35s */
+  74% { opacity: 1; }                            /* hold to ~1.45s */
+  100% { opacity: 0; transform: scale(1.03); }   /* gone at 1.95s */
+}
+
+/* CareerForm, second: bigger on purpose, with the sparkle field around it — 1.95s → out. */
+.intro-careerform {
+  width: clamp(260px, 38vw, 560px);
+  height: auto;
+  opacity: 0;
+  animation: intro-careerform 1.9s ease-in-out forwards;
+}
+@keyframes intro-careerform {
+  0% { opacity: 0; transform: scale(0.96); }
+  22% { opacity: 1; transform: scale(1); }       /* in by ~2.4s */
+  74% { opacity: 1; }                            /* hold to ~3.35s */
+  100% { opacity: 0; transform: scale(1.02); }   /* gone at 3.85s */
+}
+
+.intro-sparks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  grid-area: 1 / 1;
+  pointer-events: none;
+  opacity: 0;
+  animation: intro-sparks-live 1.9s ease forwards;
+}
+@keyframes intro-sparks-live {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .intro-zeticuz { width: clamp(130px, 34vw, 190px); }
+  .intro-careerform { width: clamp(230px, 62vw, 340px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-splash, .intro-splash > img, .intro-sparks { animation: none; opacity: 0; }
+  .intro-splash { display: none; }
+}

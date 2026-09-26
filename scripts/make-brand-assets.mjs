@@ -1,33 +1,38 @@
 /**
- * Rebuild every CareerForm brand asset from the designer's exports.
+ * Rebuild every CareerForm brand asset from the designer's master.
  *
  *   node scripts/make-brand-assets.mjs
- *   node scripts/make-brand-assets.mjs --dark "<export.png>" --light "<export.png>"
+ *   node scripts/make-brand-assets.mjs --master "<export.svg>"
  *   node scripts/make-brand-assets.mjs --emblem "<mark.png>"
  *
  * Three jobs, in order:
  *
- *   1. Crop each wordmark export to its ink box and write the two web logos. The dark
- *      artwork is white lettering (it only reads on the near-black theme) and the light
- *      one is black lettering, so `brand-logo.tsx` swaps between them with `data-theme`.
- *      Both are cropped to the *same* box on purpose: the header swaps artwork on a theme
- *      toggle, and two different intrinsic sizes would make the header twitch.
- *   2. Cut the emblem out of the wordmark (its ink is the leftmost column run) and use it
- *      as the icon master. The emblem is the same mark as the standalone export, but a
- *      ~430px render instead of a ~100px one, so the 256px favicon entry and the 512px
- *      touch icon stay sharp instead of being upscaled from a thumbnail.
- *   3. Emit the icon set. `src/app/favicon.ico` once shipped as the untouched Next.js
- *      starter file — the Vercel triangle in the browser tab — so it needs a real
- *      multi-resolution .ico. The project deliberately keeps no image dependency (sharp
- *      is only present as a transitive Next.js optional), so the decode, the alpha-aware
- *      downscale and the ICO container are all done here with Node's own zlib.
+ *   1. Trim the master wordmark. The export ships as a `1920x450` canvas with the lockup
+ *      floating inside it, so the viewBox is rewritten to the measured ink box — the same
+ *      job the old PNG path did by cropping pixels, done here by cropping the frame. No
+ *      drawing command is touched, so the artwork renders exactly as exported, just with no
+ *      dead margin around it. The right ratio is stated once as INK_CROP below; re-running
+ *      the script on its own output is a no-op.
+ *   2. Write the light-theme twin. The master is white lettering with a two-step black
+ *      shadow copy behind it, which is invisible against the near-black theme and would
+ *      read as a real drop shadow on the pale one. The light file therefore swaps the ink
+ *      (`#fbfbfb` → the light theme's `--heading`) and drops the shadow layers, leaving
+ *      the same lockup in the same place at the same size. The emblem keeps its colours on
+ *      both. Both files share one viewBox so the header never twitches on a theme toggle.
+ *   3. Lift the emblem out of the master and emit the icon set. The emblem is embedded in
+ *      the SVG as a `1276x1124` PNG — far larger than the wordmark export's raster was —
+ *      so the 256px favicon entry and the 512px touch icon are built from a real source
+ *      instead of an upscaled thumbnail. `src/app/favicon.ico` once shipped as the
+ *      untouched Next.js starter file — the Vercel triangle in the browser tab — so it
+ *      needs a real multi-resolution .ico. The project deliberately keeps no image
+ *      dependency (sharp is only present as a transitive Next.js optional), so the decode,
+ *      the alpha-aware downscale and the ICO container are all done here with Node's zlib.
  *
- * Inputs: the two `1920x450` wordmark exports (or the already-cropped files, in which case
- * the crop is a no-op and the run is repeatable). Outputs:
+ * Input: the master SVG (by default `public/careerform-logo.svg`, i.e. whatever shipped
+ * last time, which makes a bare run repeatable and byte-stable). Outputs:
  *
- *   public/careerform-logo.png        dark theme  (white lettering)
- *   public/careerform-logo-light.png  light theme (black lettering)
- *   public/careerform-icon.png        the mark alone, square
+ *   public/careerform-logo.svg        dark theme  (white lettering, as exported)
+ *   public/careerform-logo-light.svg  light theme (dark lettering, no shadow)
  *   src/app/favicon.ico               16 / 32 / 48 / 256 px entries
  *   src/app/icon.png                  512 px square, served at /icon.png
  *   src/app/apple-icon.png            180 px square for iOS home screens
@@ -42,15 +47,26 @@ const flag = (name, fallback) => {
   return at >= 0 && args[at + 1] ? args[at + 1] : fallback;
 };
 
-const DARK_SOURCE = flag('dark', 'public/careerform-logo.png');
-const LIGHT_SOURCE = flag('light', 'public/careerform-logo-light.png');
+const MASTER_SVG = flag('master', 'public/careerform-logo.svg');
 const EMBLEM_SOURCE = flag('emblem', '');
 
 const WEB_LOGOS = {
-  dark: 'public/careerform-logo.png',
-  light: 'public/careerform-logo-light.png',
+  dark: 'public/careerform-logo.svg',
+  light: 'public/careerform-logo-light.svg',
 };
-const WEB_ICON = 'public/careerform-icon.png';
+
+/**
+ * The frame the master is trimmed to: `viewBox="x y width height"`, in the master's own
+ * units. Measured once from the rendered artwork (its ink spans 9,4 → 1416,303) plus two
+ * units of breathing room on each side so the soft shadow edge is never clipped at 4x.
+ */
+const INK_CROP = '7 2 1412 304';
+
+/** The exported white and the light theme's `--heading`, i.e. the ink each theme wants. */
+const INK = { dark: '#fbfbfb', light: '#020617' };
+
+/** The master's root element, with its canvas size replaced by the trimmed frame. */
+const CROP_VIEWBOX = /viewBox="[^"]*"/;
 
 // ----------------------------------------------------------------- PNG decoding
 const CRC_TABLE = (() => {
@@ -88,7 +104,7 @@ function paeth(a, b, c) {
   return c;
 }
 
-/** Decode an 8-bit non-interlaced PNG into RGBA pixels. */
+/** Decode an 8-bit non-interlaced PNG (grey, RGB, or either with alpha) into RGBA pixels. */
 function decodePng(buf) {
   if (buf.readUInt32BE(0) !== 0x89504e47) throw new Error('not a PNG');
   let offset = 8;
@@ -107,8 +123,10 @@ function decodePng(buf) {
       if (data[8] !== 8) throw new Error(`only 8-bit PNGs are supported (got ${data[8]})`);
       if (data[12] !== 0) throw new Error('interlaced PNGs are not supported');
       colorType = data[9];
-      if (colorType !== 6 && colorType !== 2) {
-        throw new Error(`unsupported PNG colour type ${colorType} (need 2 or 6)`);
+      // 0 and 4 are the grayscale forms, and they are not optional here: the artwork's
+      // alpha maps are stored that way.
+      if (![0, 2, 4, 6].includes(colorType)) {
+        throw new Error(`unsupported PNG colour type ${colorType} (need 0, 2, 4 or 6)`);
       }
     } else if (type === 'IDAT') {
       idat.push(data);
@@ -119,7 +137,7 @@ function decodePng(buf) {
   }
 
   const raw = zlib.inflateSync(Buffer.concat(idat));
-  const channels = colorType === 6 ? 4 : 3;
+  const channels = colorType === 6 ? 4 : colorType === 2 ? 3 : colorType === 4 ? 2 : 1;
   const stride = width * channels;
   const rgba = Buffer.alloc(width * height * 4);
 
@@ -142,10 +160,17 @@ function decodePng(buf) {
     for (let x = 0; x < width; x += 1) {
       const s = x * channels;
       const d = (y * width + x) * 4;
-      rgba[d] = line[s];
-      rgba[d + 1] = line[s + 1];
-      rgba[d + 2] = line[s + 2];
-      rgba[d + 3] = channels === 4 ? line[s + 3] : 255;
+      if (channels <= 2) {
+        rgba[d] = line[s];
+        rgba[d + 1] = line[s];
+        rgba[d + 2] = line[s];
+        rgba[d + 3] = channels === 2 ? line[s + 1] : 255;
+      } else {
+        rgba[d] = line[s];
+        rgba[d + 1] = line[s + 1];
+        rgba[d + 2] = line[s + 2];
+        rgba[d + 3] = channels === 4 ? line[s + 3] : 255;
+      }
     }
     prev = line;
   }
@@ -371,77 +396,122 @@ function crop(src, box) {
   return { width: box.w, height: box.h, rgba };
 }
 
-/** Smallest box containing both — the canvas the two logos are cropped to, so the pair
- *  always comes out the same size even if one export has a stray pixel more ink. */
-function union(a, b) {
-  const x = Math.min(a.x, b.x);
-  const y = Math.min(a.y, b.y);
-  return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+// ----------------------------------------------------------------- trimming the master
+/**
+ * Remove every `<g …>` whose opening tag matches `open`, content included.
+ *
+ * The light twin has to lose the two black copies the designer layered behind the
+ * lettering to fake a shadow, and those copies are ordinary nested groups, so the removal
+ * walks the tags and counts depth rather than pattern-matching a closing tag.
+ */
+function dropGroups(svg, open) {
+  let out = svg;
+  for (;;) {
+    const start = out.search(open);
+    if (start < 0) return out;
+    const tags = /<\/?g\b[^>]*>/g;
+    tags.lastIndex = start;
+    let depth = 0;
+    let end = -1;
+    for (let m = tags.exec(out); m; m = tags.exec(out)) {
+      if (m[0].startsWith('</')) {
+        depth -= 1;
+        if (depth === 0) {
+          end = m.index + m[0].length;
+          break;
+        }
+      } else if (!m[0].endsWith('/>')) {
+        depth += 1;
+      }
+    }
+    if (end < 0) throw new Error('unbalanced <g> while stripping the shadow layers');
+    out = out.slice(0, start) + out.slice(end);
+  }
 }
 
 /**
- * The emblem sits to the left of the wordmark, separated by a column gap, so the mark is
- * the first run of inked columns. Cutting it from the wordmark export rather than taking a
- * separate small file is what keeps the 512px icon from being an upscaled thumbnail.
+ * The light-theme twin: the same lockup, in ink instead of white light.
+ *
+ * The wordmark is white vector lettering, so it is a fill swap — one colour, no geometry
+ * touched. The two black copies the designer layered behind that lettering to fake a shadow
+ * are dropped: on the near-black theme they are invisible, but on a pale page they would
+ * read as exactly the drop shadow this mark is not meant to carry.
+ *
+ * Everything else in the file is already dark — the flag emblem is in full colour and the
+ * two decorative pieces are near-black and gold — so they are all visible on white as they
+ * stand and are left completely alone.
  */
-function leftmostRun(src) {
-  for (let x = 0; x < src.width; x += 1) {
-    let inked = false;
-    for (let y = 0; y < src.height; y += 1) {
-      if (src.rgba[(y * src.width + x) * 4 + 3] > 8) {
-        inked = true;
-        break;
-      }
-    }
-    if (!inked) continue;
-    let end = x;
-    while (end + 1 < src.width) {
-      let any = false;
-      for (let y = 0; y < src.height; y += 1) {
-        if (src.rgba[(y * src.width + (end + 1)) * 4 + 3] > 8) {
-          any = true;
-          break;
-        }
-      }
-      if (!any) break;
-      end += 1;
-    }
-    return { x, end };
+function lightTwin(svg) {
+  const white = (svg.match(new RegExp(`fill="${INK.dark}"`, 'g')) || []).length;
+  if (!white) throw new Error(`the master has no ${INK.dark} ink to swap`);
+  return dropGroups(
+    svg.replaceAll(`fill="${INK.dark}"`, `fill="${INK.light}"`),
+    /<g fill="#000000" fill-opacity="0(?:\.302|\.502)?">/
+  );
+}
+
+/**
+ * The emblem, as the master embeds it.
+ *
+ * Every raster in the file is stored as a pair: a grayscale alpha map in `<defs>` and the
+ * RGB copy that is actually drawn, with a black background baked into the colour half. The
+ * file itself recovers the shape by filtering the alpha map into a mask, so the colour half
+ * alone is a black square. Pairing the two halves here at full resolution hands the icon set
+ * a cleaner master than the SVG renders — the artwork's own alpha at 1:1 — and one that is
+ * far larger than any standalone mark export was.
+ *
+ * The pair is chosen by which drawn image sits furthest left (the emblem leads the lockup),
+ * rather than by a coordinate that only happens to be right today.
+ */
+function embeddedEmblem(svg) {
+  const [defsPart, body] = svg.split('</defs>');
+  const alphaMaps = [...defsPart.matchAll(/base64,([A-Za-z0-9+/=]+)/g)].map(m => m[1]);
+  const drawn = [...body.matchAll(/base64,([A-Za-z0-9+/=]+)/g)].map(m => m[1]);
+  const placed = [...body.matchAll(
+    /<g transform="matrix\((?:[-\d.]+,\s*){4}([-\d.]+),\s*[-\d.]+\s*\)">\s*<image[^>]*?base64,([A-Za-z0-9+/=]+)/g
+  )];
+  if (!placed.length) throw new Error('no embedded rasters in the body — nothing to cut an emblem from');
+  const emblemIndex = drawn.indexOf(
+    placed.reduce((a, b) => (Number(b[1]) < Number(a[1]) ? b : a))[2]
+  );
+  const colour = decodePng(Buffer.from(drawn[emblemIndex], 'base64'));
+  const alpha = decodePng(Buffer.from(alphaMaps[emblemIndex], 'base64'));
+  if (colour.width !== alpha.width || colour.height !== alpha.height) {
+    throw new Error('the emblem\'s colour half and alpha map do not match');
   }
-  return null;
+
+  const rgba = Buffer.alloc(colour.width * colour.height * 4);
+  for (let k = 0; k < colour.width * colour.height; k += 1) {
+    rgba[k * 4] = colour.rgba[k * 4];
+    rgba[k * 4 + 1] = colour.rgba[k * 4 + 1];
+    rgba[k * 4 + 2] = colour.rgba[k * 4 + 2];
+    rgba[k * 4 + 3] = alpha.rgba[k * 4];
+  }
+  const trimmed = crop({ width: colour.width, height: colour.height, rgba }, inkBounds({ width: colour.width, height: colour.height, rgba }));
+  console.log(`emblem    embedded #${emblemIndex + 1} — ${colour.width}x${colour.height}, ink ${trimmed.width}x${trimmed.height}`);
+  return trimmed;
 }
 
 // ----------------------------------------------------------------- run
-const exportedDark = decodePng(fs.readFileSync(DARK_SOURCE));
-const exportedLight = decodePng(fs.readFileSync(LIGHT_SOURCE));
+const masterSvg = fs.readFileSync(MASTER_SVG, 'utf8');
 
-const darkBox = inkBounds(exportedDark);
-const lightBox = inkBounds(exportedLight);
-const shared = union(darkBox, lightBox);
+// 1. Trim the frame. The metadata block is the design tool's C2PA provenance manifest —
+//    bytes nothing draws; every coordinate in the file is left exactly as exported.
+const trimmed = masterSvg
+  .replace(/<metadata>[\s\S]*?<\/metadata>/, '')
+  .replace(CROP_VIEWBOX, `viewBox="${INK_CROP}"`);
 
-const darkLogo = crop(exportedDark, shared);
-const lightLogo = crop(exportedLight, shared);
+fs.writeFileSync(WEB_LOGOS.dark, trimmed);
+console.log(`wordmark  ${MASTER_SVG} — ${masterSvg.length} → ${trimmed.length} bytes, frame ${INK_CROP}`);
 
-fs.writeFileSync(WEB_LOGOS.dark, encodePng(darkLogo.width, darkLogo.height, darkLogo.rgba));
-fs.writeFileSync(WEB_LOGOS.light, encodePng(lightLogo.width, lightLogo.height, lightLogo.rgba));
-
-console.log(`dark  ${DARK_SOURCE} — ${exportedDark.width}x${exportedDark.height}, ink box ${darkBox.w}x${darkBox.h} at (${darkBox.x}, ${darkBox.y})`);
-console.log(`light ${LIGHT_SOURCE} — ${exportedLight.width}x${exportedLight.height}, ink box ${lightBox.w}x${lightBox.h} at (${lightBox.x}, ${lightBox.y})`);
-console.log(`logos written at ${shared.w}x${shared.h} — ${WEB_LOGOS.dark}, ${WEB_LOGOS.light}`);
+// 2. The light twin, same lockup in the theme's ink.
+const light = lightTwin(trimmed);
+fs.writeFileSync(WEB_LOGOS.light, light);
+console.log(`light     ${WEB_LOGOS.light} — ${light.length} bytes`);
 
 // The emblem master. `--emblem` short-circuits the cut for a standalone mark export.
-let emblem = darkLogo;
-if (EMBLEM_SOURCE) {
-  emblem = decodePng(fs.readFileSync(EMBLEM_SOURCE));
-  console.log(`emblem from ${EMBLEM_SOURCE} — ${emblem.width}x${emblem.height}`);
-} else {
-  const run = leftmostRun(darkLogo);
-  if (!run) throw new Error('the dark artwork has no ink — nothing to cut an emblem from');
-  const stem = crop(darkLogo, { x: 0, y: 0, w: run.end + 1, h: darkLogo.height });
-  emblem = crop(stem, inkBounds(stem));
-  fs.writeFileSync(WEB_ICON, encodePng(emblem.width, emblem.height, emblem.rgba));
-  console.log(`emblem cut from columns ${run.x}-${run.end} — ${emblem.width}x${emblem.height} → ${WEB_ICON}`);
-}
+const emblem = EMBLEM_SOURCE ? decodePng(fs.readFileSync(EMBLEM_SOURCE)) : embeddedEmblem(trimmed);
+if (EMBLEM_SOURCE) console.log(`emblem    from ${EMBLEM_SOURCE} — ${emblem.width}x${emblem.height}`);
 
 const source = emblem;
 const emblemBox = alphaBounds(source);

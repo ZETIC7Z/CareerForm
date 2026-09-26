@@ -10,6 +10,7 @@ import ToolsSelectorModal from './tools-selector-modal';
 import ThemeToggle from './theme-toggle';
 import ThemeAccentPicker from './theme-accent-picker';
 import LiveTimeWeather from './live-time-weather';
+import AccountsCounter from './accounts-counter';
 import BrandMark from './brand-logo';
 
 const navLinks = [
@@ -109,10 +110,19 @@ export default function GlassNavigation() {
           the glass tint changes as you scroll, so the logo never slides or resizes and
           never reappears anywhere else on the page — it is simply locked at the top. */}
       <header className="fixed z-50 top-0 left-0 right-0 transition-all duration-500">
-        {/* Realtime Clock & Auto-detected Weather (Site Center Top) */}
+        {/* The site's live status strip: the clock and the auto-detected weather, then how
+            many accounts exist. It is the one row in the header with room to spare at every
+            width — the nav row below it is already fully spoken for by the links and the
+            account controls, so a badge there would push them off the edge — and a live
+            count beside a live clock reads as one deliberate status bar rather than as a
+            stray number. The counter stays out of the way under 640px, where the clock
+            alone already fills the row. */}
         <div className="w-full flex justify-center pt-2 pb-1 pointer-events-none">
-          <div className="pointer-events-auto">
+          <div className="pointer-events-auto flex items-center gap-2.5">
             <LiveTimeWeather />
+            <span className="hidden sm:block">
+              <AccountsCounter />
+            </span>
           </div>
         </div>
 
@@ -126,10 +136,13 @@ export default function GlassNavigation() {
                 longer spells the name out in type beside it. The height is deliberately
                 constant: the bar may tighten on scroll, but the logo itself stays locked
                 at the same size and the same place rather than animating under the
-                reader's eyes. BrandMark's default size is a viewport-driven clamp, so the
-                mark reads large on a desktop without crowding the links at 1024px. */}
-            <Link href="/" className="flex items-center group shrink-0" aria-label="CareerForm PH home">
-              <BrandMark priority />
+                reader's eyes. The clamp runs larger than it used to (+10% at the top end,
+                and a taller floor on phones where the mark previously read too small).
+                `header-brand` lifts the mark a few pixels: the flag emblem hangs below the
+                lettering, so the artwork's optical centre sits lower than the row's true
+                centre and the wordmark reads slightly sunk next to the nav links. */}
+            <Link href="/" className="header-brand flex items-center group shrink-0" aria-label="CareerForm PH home">
+              <BrandMark priority height="clamp(40px, 8.5vw, 62px)" />
             </Link>
 
             {/* Desktop Navigation Links — never break a label across two lines, and the

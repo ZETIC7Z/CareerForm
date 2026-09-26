@@ -21,9 +21,22 @@ export async function GET(req: Request) {
     const qLon = searchParams.get('lon');
     const qCity = searchParams.get('city');
 
+    // Vercel's geo headers arrive percent-encoded ("Cebu%20City"); nothing downstream
+    // decodes them, so the pill used to render the literal "%20". Decode once, here.
+    const decodeHeader = (value: string | null): string | null => {
+      if (!value) return value;
+      try {
+        return decodeURIComponent(value);
+      } catch {
+        return value;
+      }
+    };
+
     const headers = new Headers(req.headers);
-    let city = qCity || headers.get('x-vercel-ip-city');
-    let region = headers.get('x-vercel-ip-country-region') || headers.get('x-vercel-ip-country');
+    let city = decodeHeader(qCity) || decodeHeader(headers.get('x-vercel-ip-city'));
+    let region =
+      decodeHeader(headers.get('x-vercel-ip-country-region')) ||
+      decodeHeader(headers.get('x-vercel-ip-country'));
     let latStr = qLat || headers.get('x-vercel-ip-latitude');
     let lonStr = qLon || headers.get('x-vercel-ip-longitude');
 

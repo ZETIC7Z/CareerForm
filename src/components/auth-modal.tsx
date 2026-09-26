@@ -21,6 +21,7 @@ import {
   BellRing,
 } from 'lucide-react';
 import { syncLocalDrafts } from '@/lib/drafts';
+import { ACCOUNT_CREATED_EVENT } from './accounts-counter';
 
 export interface UserSession {
   id: string;
@@ -234,6 +235,12 @@ export default function AuthModal({
       setSuccessMsg(
         (mode === 'signup' ? 'Account created successfully!' : 'Signed in successfully!') + syncedNote
       );
+      // The header's registered-accounts badge counts every account in the database, so the
+      // one that was just made here is worth telling it about: without this the new number
+      // would wait out a poll interval before the person who registered ever saw it move.
+      if (mode === 'signup' && typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(ACCOUNT_CREATED_EVENT));
+      }
       setTimeout(() => {
         onSuccess?.(data.user);
         onClose();

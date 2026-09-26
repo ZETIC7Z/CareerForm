@@ -1,6 +1,7 @@
 import type {Metadata,Viewport} from 'next';
 import './globals.css';
 import SiteChrome from '@/components/site-chrome';
+import IntroSplash from '@/components/intro-splash';
 import JsonLd from '@/components/json-ld';
 import {SITE_ORIGIN} from '@/lib/site';
 import {graph,organizationNode,websiteNode} from '@/lib/structured-data';
@@ -108,6 +109,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body>
+        {/* The opening show: ZETICUZ, then CareerForm with the sparkles, then the site.
+            It sits above every surface (z-index 200), mounts once per full page load, and
+            renders nothing at all for readers who prefer reduced motion. */}
+        <IntroSplash />
         {/* Structured data for every page: who publishes the site, and what the site is.
             The per-tool WebApplication nodes live on their own routes. */}
         <JsonLd data={graph([organizationNode(),websiteNode()])}/>

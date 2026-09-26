@@ -131,7 +131,7 @@ export default function SiteChrome({children}:{children:React.ReactNode}){
             style={{height: '26px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 10px rgba(6,182,212,0.3))'}}
           />
           <span style={{fontSize: '13px', fontWeight: 600, letterSpacing: '0.04em', color: 'var(--foreground)'}}>
-            SITE DEVELOPED BY: <strong style={{color: '#ef4444'}}>ZETICUZ</strong>
+            SITE DEVELOPED BY: <strong style={{color: '#ef4444'}}>Sam Pangilinan</strong>
           </span>
           <span style={{color: 'var(--muted)', fontSize: '12px'}}>· © 2026 {SITE.name}</span>
         </div>
