@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { getUsersCollection, pushNotification, type UserDoc } from './db';
 import { normaliseUsername } from './auth';
+import { sendSecurityAlertEmail } from './mailer';
 
 /**
  * The account record as the API layer wants it: the Mongo document plus the string id
@@ -57,7 +58,14 @@ export async function uniqueUsername(seed: string): Promise<string> {
   return `applicant${Date.now().toString(36).slice(-6)}`;
 }
 
-/** Fire-and-forget security notice for the bell (never fails the request that caused it). */
+/**
+ * Security notice, by bell and by mailbox (never fails the request that caused it).
+ *
+ * The bell only reaches someone who is already signed in and looking, which is exactly
+ * the person who does not need to be told. The email is for the other case — a password
+ * changed at 3am by someone who is not the account holder — so both are sent for the same
+ * event and the mail is deliberately not awaited.
+ */
 export async function notifySecurity(
   userId: string,
   title: string,
@@ -65,6 +73,8 @@ export async function notifySecurity(
   href = '/dashboard?tab=security'
 ): Promise<void> {
   await pushNotification(userId, { type: 'system', title, body, href, read: false });
+  const user = await findUserById(userId).catch(() => null);
+  if (user) void sendSecurityAlertEmail(user.email, user.name, title, body);
 }
 
 /**
