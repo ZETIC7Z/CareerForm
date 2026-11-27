@@ -279,3 +279,15 @@ MongoDB directly to confirm the account, notification and session rows are reall
 ## ⚖️ Disclaimer
 
 *CareerForm PH is an independent, open-source productivity tool developed by ZETICUZ for Filipino civil service applicants. It is not officially affiliated with, endorsed by, or operated by the Civil Service Commission (CSC) of the Republic of the Philippines. All trademarks and official forms belong to their respective government entities.*
+
+---
+
+## ⭐ Star History
+
+<a href="https://star-history.com/#ZETIC7Z/CareerForm&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ZETIC7Z/CareerForm&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ZETIC7Z/CareerForm&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ZETIC7Z/CareerForm&type=Date" />
+ </picture>
+</a>
